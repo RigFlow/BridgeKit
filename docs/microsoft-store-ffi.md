@@ -89,6 +89,23 @@ When no match is found, the client returns `isValid: false` with
 
 ## Desktop Bridge note
 
-If the Tauri app uses the Desktop Bridge, the host app may need additional
+Desktop and Tauri hosts should associate the main window `HWND` with Store
+purchase UI before calling purchase APIs:
+
+```rust
+bridgekit::set_store_window_handle(hwnd);
+```
+
+BridgeKit uses WinRT `IInitializeWithWindow` so `StoreContext` can present
+purchase dialogs from desktop processes.
+
+If the Tauri app uses the Desktop Bridge, the host app may also need additional
 `StoreContext` initialization for the current user. See Microsoft's
 [StoreContext guidance for desktop apps](https://learn.microsoft.com/en-us/windows/uwp/monetize/in-app-purchases-and-trials#use-the-storecontext-class-in-desktop-apps).
+
+## Subscription metadata
+
+Subscription products map `StoreSku.SubscriptionInfo` into:
+
+- `subscriptionPeriod` as an ISO 8601 duration such as `P1M`
+- `trialPeriod` when the SKU exposes a trial

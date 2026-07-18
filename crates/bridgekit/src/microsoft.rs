@@ -469,6 +469,18 @@ impl PushProvider for MicrosoftPushProvider {
     }
 }
 
+/// Formats Microsoft Store duration units into ISO 8601 durations.
+#[must_use]
+pub fn format_store_duration(period: u32, unit: &str) -> String {
+    match unit {
+        "Day" => format!("P{period}D"),
+        "Week" => format!("P{period}W"),
+        "Month" => format!("P{period}M"),
+        "Year" => format!("P{period}Y"),
+        _ => format!("P{period}D"),
+    }
+}
+
 #[cfg(target_os = "windows")]
 pub mod native {
     use super::*;
@@ -672,6 +684,13 @@ mod tests {
             serde_json::from_str(json).expect("Microsoft product JSON should parse");
         assert_eq!(product.store_id, "9NBLGGH4R315");
         assert_eq!(product.kind, MicrosoftProductKind::Subscription);
+    }
+
+    #[test]
+    fn format_store_duration_uses_iso8601_units() {
+        assert_eq!(format_store_duration(1, "Month"), "P1M");
+        assert_eq!(format_store_duration(7, "Day"), "P7D");
+        assert_eq!(format_store_duration(1, "Year"), "P1Y");
     }
 
     #[test]

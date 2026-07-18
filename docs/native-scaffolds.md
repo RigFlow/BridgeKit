@@ -1,11 +1,8 @@
 # Native implementation scaffolds
 
-BridgeKit now includes platform-gated native scaffold clients. They are wired
-into `BridgeKit::native()` on store platforms, but intentionally return
-`ProviderUnavailable` until real native framework bindings are implemented.
-
-This gives apps and downstream crates stable type names and wiring points while
-keeping Linux CI and local mock development buildable.
+BridgeKit includes platform-gated native clients wired into
+`BridgeKit::native()` on Apple and Windows targets. Enable the corresponding FFI
+features to activate the native bindings.
 
 ## Apple
 
@@ -39,9 +36,8 @@ The Swift package at `native/apple/BridgeKitStoreKit` implements those ABIs.
 See [`apple-storekit-swift-package.md`](apple-storekit-swift-package.md) for Apple
 linking instructions.
 
-Other StoreKit and APNs operations return
-`BridgeKitError::ProviderUnavailable` with an operation-specific message until
-their native bindings are implemented.
+Without the FFI features enabled, Apple native operations return
+`BridgeKitError::ProviderUnavailable` with an operation-specific message.
 
 ### Required Apple setup
 

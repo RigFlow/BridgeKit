@@ -206,6 +206,15 @@ helpers such as `purchase(...)` and `registerPush(...)`.
 See [`docs/mock-tauri-app.md`](docs/mock-tauri-app.md) for a runnable mock app
 that wires the Rust mocks, Tauri plugin, and TypeScript SDK together.
 
+See [`docs/apple-tauri-app.md`](docs/apple-tauri-app.md) for a native Apple
+StoreKit/APNs Tauri example.
+
+See [`docs/windows-tauri-app.md`](docs/windows-tauri-app.md) for a native
+Microsoft Store/WNS Tauri example.
+
+See [`docs/server-side-validation.md`](docs/server-side-validation.md) for
+backend receipt and license validation guidance.
+
 ## Local development
 
 Use mocks to exercise app flows before store credentials and signed builds are

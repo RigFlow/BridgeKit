@@ -3,6 +3,8 @@ members = [
   "crates/bridgekit",
   "crates/tauri-plugin-bridgekit",
   "examples/mock-tauri-app/src-tauri",
+  "examples/apple-tauri-app/src-tauri",
+  "examples/windows-tauri-app/src-tauri",
 ]
 resolver = "2"
 

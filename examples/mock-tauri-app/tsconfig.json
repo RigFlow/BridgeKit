@@ -3,6 +3,7 @@
     "exactOptionalPropertyTypes": true,
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
+    "noEmit": true,
     "paths": {
       "@bridgekit/tauri": ["../../packages/bridgekit-js/src/index.ts"]
     },

@@ -56,6 +56,17 @@ The plugin exposes:
 
 ## Frontend invocation
 
+Use the TypeScript SDK for typed frontend calls:
+
+```ts
+import { purchase, registerPush } from "@bridgekit/tauri";
+
+const transaction = await purchase({ productId: "pro.monthly" });
+const registration = await registerPush({ environment: "production" });
+```
+
+See [`typescript-sdk.md`](typescript-sdk.md) for the full SDK API.
+
 Tauri plugin commands are invoked through the plugin namespace:
 
 ```ts

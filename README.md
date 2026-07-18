@@ -19,11 +19,13 @@ changing app-facing Tauri commands.
 ```text
 crates/bridgekit
 crates/tauri-plugin-bridgekit
+packages/bridgekit-js
 ```
 
 `bridgekit` is the Rust library intended to be imported by Tauri apps.
 `tauri-plugin-bridgekit` registers BridgeKit state and exposes standard Tauri
 commands.
+`@bridgekit/tauri` is the TypeScript frontend SDK for those plugin commands.
 
 ## Quick start
 
@@ -33,6 +35,12 @@ Add the crate to a Tauri app:
 [dependencies]
 bridgekit = { git = "https://github.com/RigFlow/BridgeKit" }
 tauri-plugin-bridgekit = { git = "https://github.com/RigFlow/BridgeKit" }
+```
+
+Add the frontend SDK:
+
+```sh
+npm install @bridgekit/tauri
 ```
 
 Create app state with either native providers or mocks:
@@ -168,6 +176,9 @@ Store/WNS adapter boundary that is available under `bridgekit::microsoft`.
 See [`docs/tauri-plugin.md`](docs/tauri-plugin.md) for the plugin commands and
 frontend invocation examples.
 
+See [`docs/typescript-sdk.md`](docs/typescript-sdk.md) for typed frontend
+helpers such as `purchase(...)` and `registerPush(...)`.
+
 ## Local development
 
 Use mocks to exercise app flows before store credentials and signed builds are
@@ -188,4 +199,6 @@ Run checks:
 
 ```sh
 cargo test
+npm run typecheck
+npm run build
 ```

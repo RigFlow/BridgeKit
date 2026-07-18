@@ -2,16 +2,20 @@
 #![cfg(windows)]
 
 use crate::microsoft::{
-    MicrosoftLicenseValidationRequest, MicrosoftLicenseValidationResult, MicrosoftProduct,
-    MicrosoftProductKind, MicrosoftProductRequest, MicrosoftPurchase, MicrosoftPurchaseRequest,
-    MicrosoftTransactionState,
+    format_store_duration, MicrosoftLicenseValidationRequest, MicrosoftLicenseValidationResult,
+    MicrosoftProduct, MicrosoftProductKind, MicrosoftProductRequest, MicrosoftPurchase,
+    MicrosoftPurchaseRequest, MicrosoftTransactionState,
 };
 use crate::{BridgeKitError, Result};
+use std::sync::OnceLock;
 use windows::Services::Store::{
-    StoreContext, StoreProduct, StorePurchaseStatus, StorePurchaseResult,
+    StoreContext, StoreDurationUnit, StoreProduct, StorePurchaseStatus, StorePurchaseResult,
+    StoreSku,
 };
+use windows::Win32::Foundation::HWND;
+use windows::Win32::UI::Shell::IInitializeWithWindow;
 use windows_collections::IIterable;
-use windows_core::HSTRING;
+use windows_core::{Interface, HSTRING};
 
 const PRODUCT_KINDS: &[&str] = &[
     "Consumable",
@@ -19,6 +23,13 @@ const PRODUCT_KINDS: &[&str] = &[
     "UnmanagedConsumable",
     "Subscription",
 ];
+
+static STORE_OWNER_HWND: OnceLock<isize> = OnceLock::new();
+
+/// Associates the owner `HWND` used by Microsoft Store purchase UI.
+pub fn set_store_window_handle(hwnd: isize) {
+    let _ = STORE_OWNER_HWND.set(hwnd);
+}
 
 pub fn products(request: MicrosoftProductRequest) -> Result<Vec<MicrosoftProduct>> {
     let context = store_context()?;
@@ -157,7 +168,20 @@ pub fn validate_license(
 }
 
 fn store_context() -> Result<StoreContext> {
-    StoreContext::GetDefault().map_err(map_winrt_error)
+    let context = StoreContext::GetDefault().map_err(map_winrt_error)?;
+    if let Some(hwnd) = STORE_OWNER_HWND.get() {
+        initialize_store_context(&context, *hwnd)?;
+    }
+    Ok(context)
+}
+
+fn initialize_store_context(context: &StoreContext, hwnd: isize) -> Result<()> {
+    let initializer: IInitializeWithWindow = context.cast().map_err(map_winrt_error)?;
+    unsafe {
+        initializer
+            .Initialize(HWND(hwnd as *mut std::ffi::c_void))
+            .map_err(map_winrt_error)
+    }
 }
 
 fn ensure_query_success(
@@ -174,6 +198,7 @@ fn map_store_product(product: &StoreProduct) -> Result<MicrosoftProduct> {
     let description = product.Description().map_err(map_winrt_error)?;
     let price = product.Price().map_err(map_winrt_error)?;
     let product_kind = product.ProductKind().map_err(map_winrt_error)?;
+    let (subscription_period, trial_period) = subscription_metadata(product)?;
 
     Ok(MicrosoftProduct {
         store_id: store_id.to_string(),
@@ -182,8 +207,8 @@ fn map_store_product(product: &StoreProduct) -> Result<MicrosoftProduct> {
         display_price: price.FormattedPrice().map_err(map_winrt_error)?.to_string(),
         currency_code: price.CurrencyCode().map_err(map_winrt_error)?.to_string(),
         kind: map_product_kind(&product_kind.to_string()),
-        subscription_period: None,
-        trial_period: None,
+        subscription_period,
+        trial_period,
         raw: serde_json::json!({
             "source": "microsoft_store",
             "productKind": product_kind.to_string()
@@ -191,13 +216,45 @@ fn map_store_product(product: &StoreProduct) -> Result<MicrosoftProduct> {
     })
 }
 
+fn subscription_metadata(product: &StoreProduct) -> Result<(Option<String>, Option<String>)> {
+    let skus = product.Skus().map_err(map_winrt_error)?;
+    for entry in skus.iter() {
+        let sku = entry.map_err(map_winrt_error)?;
+        if !sku.IsSubscription().map_err(map_winrt_error)? {
+            continue;
+        }
+
+        let info = sku.SubscriptionInfo().map_err(map_winrt_error)?;
+        let subscription_period = Some(format_store_duration(
+            info.BillingPeriod().map_err(map_winrt_error)?,
+            &duration_unit_name(info.BillingPeriodUnit().map_err(map_winrt_error)?),
+        ));
+        let trial_period = if info.HasTrialPeriod().map_err(map_winrt_error)? {
+            Some(format_store_duration(
+                info.TrialPeriod().map_err(map_winrt_error)?,
+                &duration_unit_name(info.TrialPeriodUnit().map_err(map_winrt_error)?),
+            ))
+        } else {
+            None
+        };
+
+        return Ok((subscription_period, trial_period));
+    }
+
+    Ok((None, None))
+}
+
+fn duration_unit_name(unit: StoreDurationUnit) -> String {
+    format!("{unit:?}")
+}
+
 fn map_owned_product(store_id: &str, product: &StoreProduct) -> Result<MicrosoftPurchase> {
     let mapped = map_store_product(product)?;
     let license_token = product
-        .InAppOfferToken()
+        .Skus()
         .ok()
-        .map(|token| token.to_string())
-        .filter(|token| !token.is_empty())
+        .and_then(|skus| first_sku(&skus).ok())
+        .and_then(|sku| sku_license_token(&sku))
         .or_else(|| Some(store_id.to_string()));
 
     Ok(MicrosoftPurchase {
@@ -213,6 +270,32 @@ fn map_owned_product(store_id: &str, product: &StoreProduct) -> Result<Microsoft
             "verification": "user_collection"
         }),
     })
+}
+
+fn first_sku(
+    skus: &windows::Foundation::Collections::IMapView<HSTRING, StoreSku>,
+) -> Result<StoreSku> {
+    for entry in skus.iter() {
+        let (_, sku) = entry.map_err(map_winrt_error)?;
+        return Ok(sku);
+    }
+
+    Err(BridgeKitError::Native(
+        "Microsoft Store product did not contain any SKUs".into(),
+    ))
+}
+
+fn sku_license_token(sku: &StoreSku) -> Option<String> {
+    sku.InAppOfferToken()
+        .ok()
+        .map(|token| token.to_string())
+        .filter(|token| !token.is_empty())
+        .or_else(|| {
+            sku.ExtendedJsonData()
+                .ok()
+                .map(|value| value.to_string())
+                .filter(|value| !value.is_empty())
+        })
 }
 
 fn map_purchase_result(

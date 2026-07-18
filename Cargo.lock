@@ -168,11 +168,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "bridgekit-apple-tauri-app"
+version = "0.1.0"
+dependencies = [
+ "bridgekit",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-bridgekit",
+]
+
+[[package]]
 name = "bridgekit-mock-tauri-app"
 version = "0.1.0"
 dependencies = [
  "bridgekit",
  "serde_json",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-bridgekit",
+]
+
+[[package]]
+name = "bridgekit-windows-tauri-app"
+version = "0.1.0"
+dependencies = [
+ "bridgekit",
  "tauri",
  "tauri-build",
  "tauri-plugin-bridgekit",

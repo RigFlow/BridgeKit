@@ -7,19 +7,23 @@ use crate::microsoft::{
 };
 use crate::push::PushAuthorizationStatus;
 use crate::{BridgeKitError, Result};
-use windows::UI::Notifications::PushNotificationChannelManager;
+use windows::UI::Notifications::{NotificationSetting, PushNotificationChannelManager, ToastNotificationManager};
 
 pub fn request_authorization(
     request: MicrosoftPushAuthorizationRequest,
 ) -> Result<MicrosoftPushAuthorization> {
+    let manager = ToastNotificationManager::GetDefault().map_err(map_winrt_error)?;
+    let setting = manager.Setting().map_err(map_winrt_error)?;
+    let status = map_notification_setting(setting);
+
     Ok(MicrosoftPushAuthorization {
-        status: PushAuthorizationStatus::Authorized,
+        status,
         metadata: serde_json::json!({
             "source": "wns",
             "alert": request.alert,
             "badge": request.badge,
             "sound": request.sound,
-            "note": "Windows uses app manifest notification capabilities"
+            "notificationSetting": format!("{setting:?}")
         }),
     })
 }
@@ -48,6 +52,18 @@ pub fn register(request: MicrosoftPushRegistrationRequest) -> Result<MicrosoftPu
 
 pub fn unregister() -> Result<()> {
     Ok(())
+}
+
+fn map_notification_setting(setting: NotificationSetting) -> PushAuthorizationStatus {
+    match setting {
+        NotificationSetting::Enabled => PushAuthorizationStatus::Authorized,
+        NotificationSetting::DisabledForApplication | NotificationSetting::DisabledForUser => {
+            PushAuthorizationStatus::Denied
+        }
+        NotificationSetting::DisabledByGroupPolicy => PushAuthorizationStatus::Unsupported,
+        NotificationSetting::DisabledByManifest => PushAuthorizationStatus::Denied,
+        _ => PushAuthorizationStatus::NotDetermined,
+    }
 }
 
 fn filetime_to_unix_ms(universal_time: i64) -> i64 {

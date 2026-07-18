@@ -1,0 +1,13 @@
+[package]
+name = "bridgekit-apple-tauri-app"
+version = "0.1.0"
+edition.workspace = true
+publish = false
+
+[build-dependencies]
+tauri-build = "2.6.3"
+
+[dependencies]
+bridgekit = { path = "../../../crates/bridgekit", features = ["apple-storekit-ffi", "apple-apns-ffi"] }
+tauri = "2.11.5"
+tauri-plugin-bridgekit = { path = "../../../crates/tauri-plugin-bridgekit" }

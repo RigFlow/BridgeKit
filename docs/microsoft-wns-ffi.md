@@ -31,10 +31,18 @@ To validate this on Windows hardware:
 
 ## Authorization
 
-Windows does not expose an iOS-style runtime permission prompt for WNS. The
-current implementation returns `status: "authorized"` and records the requested
-alert/badge/sound options in `metadata`, along with a note that Windows relies
-on manifest capabilities.
+`request_authorization` reads the current toast notification setting through
+`ToastNotificationManager.Setting` and maps it to BridgeKit statuses:
+
+| Notification setting | BridgeKit status |
+| --- | --- |
+| `Enabled` | `authorized` |
+| `DisabledForApplication` / `DisabledForUser` | `denied` |
+| `DisabledByGroupPolicy` | `unsupported` |
+| `DisabledByManifest` | `denied` |
+
+Windows still relies on app manifest notification capabilities for WNS
+registration even when the setting reports `authorized`.
 
 ## Registration
 

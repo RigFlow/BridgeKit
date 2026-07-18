@@ -45,6 +45,12 @@ let state = AppState {
 };
 ```
 
+When an app has concrete Apple StoreKit/APNs clients, wire them directly:
+
+```rust
+let bridgekit = BridgeKit::apple(storekit_client, apns_client);
+```
+
 Expose the bridge through Tauri commands:
 
 ```rust
@@ -133,6 +139,9 @@ On unsupported targets, `BridgeKit::native()` returns explicit
 `UnsupportedPlatform` errors. This keeps Linux CI and local development
 predictable while Apple and Microsoft native adapters are linked in store
 builds.
+
+See [`docs/apple-adapter.md`](docs/apple-adapter.md) for the Apple StoreKit/APNs
+adapter boundary that is now available under `bridgekit::apple`.
 
 ## Local development
 

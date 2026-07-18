@@ -7,6 +7,7 @@
 //! providers can be linked behind the [`StoreProvider`] and [`PushProvider`]
 //! traits, while tests and development builds can use the mock providers.
 
+pub mod apple;
 mod bridge;
 mod error;
 pub mod iap;

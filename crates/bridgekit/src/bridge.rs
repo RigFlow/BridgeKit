@@ -1,3 +1,4 @@
+use crate::apple::{ApplePushClient, ApplePushProvider, AppleStoreKitClient, AppleStoreProvider};
 use crate::iap::{
     Product, ProductRequest, Purchase, PurchaseRequest, ReceiptValidationRequest,
     ReceiptValidationResult, StoreProvider,
@@ -25,6 +26,14 @@ impl BridgeKit {
     #[must_use]
     pub fn native() -> Self {
         Self::builder().build()
+    }
+
+    #[must_use]
+    pub fn apple(storekit: Arc<dyn AppleStoreKitClient>, apns: Arc<dyn ApplePushClient>) -> Self {
+        Self::with_providers(
+            Arc::new(AppleStoreProvider::new(storekit)),
+            Arc::new(ApplePushProvider::new(apns)),
+        )
     }
 
     #[must_use]

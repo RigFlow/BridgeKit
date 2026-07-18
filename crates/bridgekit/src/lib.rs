@@ -16,6 +16,10 @@ pub mod mock;
 mod platform;
 pub mod push;
 mod unsupported;
+#[cfg(windows)]
+mod winrt_store;
+#[cfg(windows)]
+mod winrt_wns;
 
 pub use bridge::{BridgeKit, BridgeKitBuilder};
 pub use error::{BridgeKitError, Result};

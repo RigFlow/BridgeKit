@@ -97,8 +97,14 @@ Scaffold clients:
 let bridgekit = bridgekit::BridgeKit::native();
 ```
 
-Until native bindings are implemented, Microsoft Store and WNS operations return
+On Windows, enable `microsoft-store-ffi` and/or `microsoft-wns-ffi` to activate the
+WinRT bindings. Without those features, Microsoft Store and WNS operations return
 `BridgeKitError::ProviderUnavailable` with an operation-specific message.
+
+Microsoft Store and WNS WinRT bindings are available on Windows behind
+`microsoft-store-ffi` and `microsoft-wns-ffi`. See
+[`microsoft-store-ffi.md`](microsoft-store-ffi.md) and
+[`microsoft-wns-ffi.md`](microsoft-wns-ffi.md).
 
 ### Required Microsoft setup
 
@@ -117,13 +123,20 @@ Real Microsoft implementations will need:
 
 Fill in:
 
-- `NativeMicrosoftStoreClient::products`
-- `NativeMicrosoftStoreClient::purchase`
-- `NativeMicrosoftStoreClient::restore_purchases`
-- `NativeMicrosoftStoreClient::validate_license`
-- `NativeMicrosoftPushClient::request_authorization`
-- `NativeMicrosoftPushClient::register`
-- `NativeMicrosoftPushClient::unregister`
+- `NativeMicrosoftStoreClient::products` via the `microsoft-store-ffi` WinRT
+  bindings
+- `NativeMicrosoftStoreClient::purchase` via the `microsoft-store-ffi` WinRT
+  bindings
+- `NativeMicrosoftStoreClient::restore_purchases` via the `microsoft-store-ffi`
+  WinRT bindings
+- `NativeMicrosoftStoreClient::validate_license` via the `microsoft-store-ffi`
+  WinRT bindings
+- `NativeMicrosoftPushClient::request_authorization` via the `microsoft-wns-ffi`
+  WinRT bindings
+- `NativeMicrosoftPushClient::register` via the `microsoft-wns-ffi` WinRT
+  bindings
+- `NativeMicrosoftPushClient::unregister` via the `microsoft-wns-ffi` WinRT
+  bindings
 
 The native layer should normalize Microsoft Store/WNS outputs into the existing
 `bridgekit::microsoft` request and response structs before returning them.

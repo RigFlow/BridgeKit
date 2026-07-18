@@ -178,6 +178,12 @@ adapter boundary that is available under `bridgekit::apple`.
 See [`docs/microsoft-adapter.md`](docs/microsoft-adapter.md) for the Microsoft
 Store/WNS adapter boundary that is available under `bridgekit::microsoft`.
 
+See [`docs/microsoft-store-ffi.md`](docs/microsoft-store-ffi.md) for the
+feature-gated Microsoft Store WinRT bindings.
+
+See [`docs/microsoft-wns-ffi.md`](docs/microsoft-wns-ffi.md) for the
+feature-gated Microsoft WNS WinRT bindings.
+
 See [`docs/native-scaffolds.md`](docs/native-scaffolds.md) for the platform-gated
 native client scaffolds selected by `BridgeKit::native()` on Apple and Windows
 targets.

@@ -485,26 +485,23 @@ pub mod native {
 
     #[async_trait]
     impl MicrosoftStoreClient for NativeMicrosoftStoreClient {
-        async fn products(
-            &self,
-            _request: MicrosoftProductRequest,
-        ) -> Result<Vec<MicrosoftProduct>> {
-            unavailable("Microsoft Store product lookup")
+        async fn products(&self, request: MicrosoftProductRequest) -> Result<Vec<MicrosoftProduct>> {
+            store_products(request).await
         }
 
-        async fn purchase(&self, _request: MicrosoftPurchaseRequest) -> Result<MicrosoftPurchase> {
-            unavailable("Microsoft Store purchase")
+        async fn purchase(&self, request: MicrosoftPurchaseRequest) -> Result<MicrosoftPurchase> {
+            store_purchase(request).await
         }
 
         async fn restore_purchases(&self) -> Result<Vec<MicrosoftPurchase>> {
-            unavailable("Microsoft Store restore purchases")
+            store_restore_purchases().await
         }
 
         async fn validate_license(
             &self,
-            _request: MicrosoftLicenseValidationRequest,
+            request: MicrosoftLicenseValidationRequest,
         ) -> Result<MicrosoftLicenseValidationResult> {
-            unavailable("Microsoft Store license validation")
+            store_validate_license(request).await
         }
     }
 
@@ -522,26 +519,237 @@ pub mod native {
     impl MicrosoftPushClient for NativeMicrosoftPushClient {
         async fn request_authorization(
             &self,
-            _request: MicrosoftPushAuthorizationRequest,
+            request: MicrosoftPushAuthorizationRequest,
         ) -> Result<MicrosoftPushAuthorization> {
-            unavailable("WNS notification authorization")
+            wns_request_authorization(request).await
         }
 
         async fn register(
             &self,
-            _request: MicrosoftPushRegistrationRequest,
+            request: MicrosoftPushRegistrationRequest,
         ) -> Result<MicrosoftPushRegistration> {
-            unavailable("WNS channel URI registration")
+            wns_register(request).await
         }
 
         async fn unregister(&self) -> Result<()> {
-            unavailable("WNS unregister")
+            wns_unregister().await
         }
+    }
+
+    #[cfg(not(feature = "microsoft-store-ffi"))]
+    async fn store_products(_request: MicrosoftProductRequest) -> Result<Vec<MicrosoftProduct>> {
+        Err(BridgeKitError::ProviderUnavailable(
+            "Microsoft Store product lookup native bindings are not enabled; enable the \
+             `microsoft-store-ffi` feature"
+                .into(),
+        ))
+    }
+
+    #[cfg(feature = "microsoft-store-ffi")]
+    async fn store_products(request: MicrosoftProductRequest) -> Result<Vec<MicrosoftProduct>> {
+        crate::winrt_store::products(request)
+    }
+
+    #[cfg(not(feature = "microsoft-store-ffi"))]
+    async fn store_purchase(_request: MicrosoftPurchaseRequest) -> Result<MicrosoftPurchase> {
+        Err(BridgeKitError::ProviderUnavailable(
+            "Microsoft Store purchase native bindings are not enabled; enable the \
+             `microsoft-store-ffi` feature"
+                .into(),
+        ))
+    }
+
+    #[cfg(feature = "microsoft-store-ffi")]
+    async fn store_purchase(request: MicrosoftPurchaseRequest) -> Result<MicrosoftPurchase> {
+        crate::winrt_store::purchase(request)
+    }
+
+    #[cfg(not(feature = "microsoft-store-ffi"))]
+    async fn store_restore_purchases() -> Result<Vec<MicrosoftPurchase>> {
+        Err(BridgeKitError::ProviderUnavailable(
+            "Microsoft Store restore purchases native bindings are not enabled; enable the \
+             `microsoft-store-ffi` feature"
+                .into(),
+        ))
+    }
+
+    #[cfg(feature = "microsoft-store-ffi")]
+    async fn store_restore_purchases() -> Result<Vec<MicrosoftPurchase>> {
+        crate::winrt_store::restore_purchases()
+    }
+
+    #[cfg(not(feature = "microsoft-store-ffi"))]
+    async fn store_validate_license(
+        _request: MicrosoftLicenseValidationRequest,
+    ) -> Result<MicrosoftLicenseValidationResult> {
+        Err(BridgeKitError::ProviderUnavailable(
+            "Microsoft Store license validation native bindings are not enabled; enable the \
+             `microsoft-store-ffi` feature"
+                .into(),
+        ))
+    }
+
+    #[cfg(feature = "microsoft-store-ffi")]
+    async fn store_validate_license(
+        request: MicrosoftLicenseValidationRequest,
+    ) -> Result<MicrosoftLicenseValidationResult> {
+        crate::winrt_store::validate_license(request)
+    }
+
+    #[cfg(not(feature = "microsoft-wns-ffi"))]
+    async fn wns_request_authorization(
+        _request: MicrosoftPushAuthorizationRequest,
+    ) -> Result<MicrosoftPushAuthorization> {
+        Err(BridgeKitError::ProviderUnavailable(
+            "WNS authorization native bindings are not enabled; enable the `microsoft-wns-ffi` \
+             feature"
+                .into(),
+        ))
+    }
+
+    #[cfg(feature = "microsoft-wns-ffi")]
+    async fn wns_request_authorization(
+        request: MicrosoftPushAuthorizationRequest,
+    ) -> Result<MicrosoftPushAuthorization> {
+        crate::winrt_wns::request_authorization(request)
+    }
+
+    #[cfg(not(feature = "microsoft-wns-ffi"))]
+    async fn wns_register(
+        _request: MicrosoftPushRegistrationRequest,
+    ) -> Result<MicrosoftPushRegistration> {
+        Err(BridgeKitError::ProviderUnavailable(
+            "WNS registration native bindings are not enabled; enable the `microsoft-wns-ffi` \
+             feature"
+                .into(),
+        ))
+    }
+
+    #[cfg(feature = "microsoft-wns-ffi")]
+    async fn wns_register(
+        request: MicrosoftPushRegistrationRequest,
+    ) -> Result<MicrosoftPushRegistration> {
+        crate::winrt_wns::register(request)
+    }
+
+    #[cfg(not(feature = "microsoft-wns-ffi"))]
+    async fn wns_unregister() -> Result<()> {
+        Err(BridgeKitError::ProviderUnavailable(
+            "WNS unregister native bindings are not enabled; enable the `microsoft-wns-ffi` \
+             feature"
+                .into(),
+        ))
+    }
+
+    #[cfg(feature = "microsoft-wns-ffi")]
+    async fn wns_unregister() -> Result<()> {
+        crate::winrt_wns::unregister()
     }
 
     fn unavailable<T>(operation: &str) -> Result<T> {
         Err(BridgeKitError::ProviderUnavailable(format!(
             "{operation} native Microsoft bindings are not implemented yet"
         )))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::push::PushAuthorizationStatus;
+
+    #[test]
+    fn microsoft_product_json_matches_native_contract() {
+        let json = r#"{
+          "storeId": "9NBLGGH4R315",
+          "title": "Pro Monthly",
+          "description": "Monthly Pro access",
+          "displayPrice": "$4.99",
+          "currencyCode": "USD",
+          "kind": "subscription",
+          "subscriptionPeriod": "P1M",
+          "trialPeriod": "P7D",
+          "raw": {
+            "source": "microsoft_store"
+          }
+        }"#;
+
+        let product: MicrosoftProduct =
+            serde_json::from_str(json).expect("Microsoft product JSON should parse");
+        assert_eq!(product.store_id, "9NBLGGH4R315");
+        assert_eq!(product.kind, MicrosoftProductKind::Subscription);
+    }
+
+    #[test]
+    fn microsoft_purchase_json_matches_native_contract() {
+        let json = r#"{
+          "transactionId": "order-1",
+          "productId": "9NBLGGH4R315",
+          "state": "purchased",
+          "licenseToken": "license-token",
+          "collectionId": "collection-id",
+          "purchasedAtMs": 1700000000000,
+          "expiresAtMs": 1702592000000,
+          "raw": {
+            "source": "microsoft_store"
+          }
+        }"#;
+
+        let purchase: MicrosoftPurchase =
+            serde_json::from_str(json).expect("Microsoft purchase JSON should parse");
+        assert_eq!(purchase.transaction_id, "order-1");
+        assert_eq!(purchase.state, MicrosoftTransactionState::Purchased);
+    }
+
+    #[test]
+    fn microsoft_license_validation_json_matches_native_contract() {
+        let json = r#"{
+          "isValid": true,
+          "productId": "9NBLGGH4R315",
+          "transactionId": "order-1",
+          "expiresAtMs": 1702592000000,
+          "raw": {
+            "source": "microsoft_store",
+            "verification": "verified"
+          }
+        }"#;
+
+        let result: MicrosoftLicenseValidationResult =
+            serde_json::from_str(json).expect("Microsoft license validation JSON should parse");
+        assert!(result.is_valid);
+        assert_eq!(result.product_id.as_deref(), Some("9NBLGGH4R315"));
+    }
+
+    #[test]
+    fn microsoft_push_authorization_json_matches_native_contract() {
+        let json = r#"{
+          "status": "authorized",
+          "metadata": {
+            "source": "wns"
+          }
+        }"#;
+
+        let authorization: MicrosoftPushAuthorization =
+            serde_json::from_str(json).expect("Microsoft push authorization JSON should parse");
+        assert_eq!(authorization.status, PushAuthorizationStatus::Authorized);
+    }
+
+    #[test]
+    fn microsoft_push_registration_json_matches_native_contract() {
+        let json = r#"{
+          "channelUri": "https://example.test/channel",
+          "environment": "production",
+          "raw": {
+            "source": "wns"
+          }
+        }"#;
+
+        let registration: MicrosoftPushRegistration =
+            serde_json::from_str(json).expect("Microsoft push registration JSON should parse");
+        assert_eq!(registration.channel_uri, "https://example.test/channel");
+        assert_eq!(
+            registration.environment,
+            Some(MicrosoftStoreEnvironment::Production)
+        );
     }
 }

@@ -18,9 +18,12 @@ changing app-facing Tauri commands.
 
 ```text
 crates/bridgekit
+crates/tauri-plugin-bridgekit
 ```
 
 `bridgekit` is the Rust library intended to be imported by Tauri apps.
+`tauri-plugin-bridgekit` registers BridgeKit state and exposes standard Tauri
+commands.
 
 ## Quick start
 
@@ -29,6 +32,7 @@ Add the crate to a Tauri app:
 ```toml
 [dependencies]
 bridgekit = { git = "https://github.com/RigFlow/BridgeKit" }
+tauri-plugin-bridgekit = { git = "https://github.com/RigFlow/BridgeKit" }
 ```
 
 Create app state with either native providers or mocks:
@@ -58,6 +62,15 @@ let bridgekit = BridgeKit::microsoft(store_client, wns_client);
 ```
 
 Expose the bridge through Tauri commands:
+
+```rust
+tauri::Builder::default()
+    .plugin(tauri_plugin_bridgekit::init(bridgekit))
+    .run(tauri::generate_context!())?;
+```
+
+If you do not want to use the plugin, the same bridge can be exposed through
+manual Tauri commands:
 
 ```rust
 use bridgekit::{
@@ -151,6 +164,9 @@ adapter boundary that is available under `bridgekit::apple`.
 
 See [`docs/microsoft-adapter.md`](docs/microsoft-adapter.md) for the Microsoft
 Store/WNS adapter boundary that is available under `bridgekit::microsoft`.
+
+See [`docs/tauri-plugin.md`](docs/tauri-plugin.md) for the plugin commands and
+frontend invocation examples.
 
 ## Local development
 

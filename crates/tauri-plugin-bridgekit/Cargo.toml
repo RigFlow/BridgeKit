@@ -1,0 +1,11 @@
+[package]
+name = "tauri-plugin-bridgekit"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+bridgekit = { version = "0.1.0", path = "../bridgekit" }
+serde = { version = "1.0.228", features = ["derive"] }
+tauri = { version = "2.11.5", default-features = false }

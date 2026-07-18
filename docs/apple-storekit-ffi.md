@@ -4,6 +4,11 @@ BridgeKit includes a first native StoreKit integration point for product lookup.
 It is compiled only for macOS/iOS and only when the `apple-storekit-ffi` feature
 is enabled.
 
+The repository includes a Swift implementation of this ABI at
+`native/apple/BridgeKitStoreKit`. See
+[`apple-storekit-swift-package.md`](apple-storekit-swift-package.md) for linking
+instructions.
+
 ```toml
 [dependencies]
 bridgekit = { git = "https://github.com/RigFlow/BridgeKit", features = ["apple-storekit-ffi"] }

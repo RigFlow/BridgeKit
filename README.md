@@ -21,6 +21,7 @@ crates/bridgekit
 crates/tauri-plugin-bridgekit
 packages/bridgekit-js
 examples/mock-tauri-app
+native/apple/BridgeKitStoreKit
 ```
 
 `bridgekit` is the Rust library intended to be imported by Tauri apps.
@@ -28,6 +29,8 @@ examples/mock-tauri-app
 commands.
 `@bridgekit/tauri` is the TypeScript frontend SDK for those plugin commands.
 `examples/mock-tauri-app` demonstrates the full mock stack in a Tauri app.
+`native/apple/BridgeKitStoreKit` provides the Swift StoreKit product lookup FFI
+implementation for Apple builds.
 
 ## Quick start
 
@@ -181,6 +184,9 @@ targets.
 
 See [`docs/apple-storekit-ffi.md`](docs/apple-storekit-ffi.md) for the
 feature-gated Apple StoreKit product lookup FFI contract.
+
+See [`docs/apple-storekit-swift-package.md`](docs/apple-storekit-swift-package.md)
+for linking the Swift StoreKit product lookup implementation.
 
 See [`docs/tauri-plugin.md`](docs/tauri-plugin.md) for the plugin commands and
 frontend invocation examples.

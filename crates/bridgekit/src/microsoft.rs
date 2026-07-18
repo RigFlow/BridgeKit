@@ -645,12 +645,6 @@ pub mod native {
     async fn wns_unregister() -> Result<()> {
         crate::winrt_wns::unregister()
     }
-
-    fn unavailable<T>(operation: &str) -> Result<T> {
-        Err(BridgeKitError::ProviderUnavailable(format!(
-            "{operation} native Microsoft bindings are not implemented yet"
-        )))
-    }
 }
 
 #[cfg(test)]

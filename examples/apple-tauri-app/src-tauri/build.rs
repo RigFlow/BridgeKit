@@ -8,7 +8,7 @@ fn main() {
 #[cfg(target_os = "macos")]
 fn link_bridgekit_storekit() {
     use std::env;
-    use std::path::{Path, PathBuf};
+    use std::path::PathBuf;
     use std::process::Command;
 
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR"));

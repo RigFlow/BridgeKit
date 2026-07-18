@@ -58,7 +58,8 @@ Fill in:
 
 - `NativeAppleStoreKitClient::products` via the `apple-storekit-ffi` symbols
 - `NativeAppleStoreKitClient::purchase` via the `apple-storekit-ffi` symbols
-- `NativeAppleStoreKitClient::restore_purchases`
+- `NativeAppleStoreKitClient::restore_purchases` via the `apple-storekit-ffi`
+  symbols
 - `NativeAppleStoreKitClient::validate_receipt`
 - `NativeApplePushClient::request_authorization`
 - `NativeApplePushClient::register`

@@ -66,6 +66,20 @@ public func bridgekitStoreKitProductsJson(_ requestJson: UnsafePointer<CChar>?) 
     }
 }
 
+@_cdecl("bridgekit_storekit_restore_purchases_json")
+public func bridgekitStoreKitRestorePurchasesJson() -> UnsafeMutablePointer<CChar>? {
+    do {
+        let transactions = try restorePurchasesSynchronously()
+        let responseData = try JSONEncoder.bridgeKit.encode(transactions)
+        guard let responseString = String(data: responseData, encoding: .utf8) else {
+            return nil
+        }
+        return strdup(responseString)
+    } catch {
+        return nil
+    }
+}
+
 @_cdecl("bridgekit_storekit_purchase_json")
 public func bridgekitStoreKitPurchaseJson(_ requestJson: UnsafePointer<CChar>?) -> UnsafeMutablePointer<CChar>? {
     guard let requestJson else {
@@ -110,6 +124,57 @@ private func fetchProductsSynchronously(productIds: [String]) throws -> [BridgeK
                 let response = products.map(BridgeKitProductResponse.init(storeKitProduct:))
                 lock.lock()
                 result = .success(response)
+                lock.unlock()
+            } catch {
+                lock.lock()
+                result = .failure(error)
+                lock.unlock()
+            }
+            semaphore.signal()
+        }
+
+        semaphore.wait()
+        lock.lock()
+        defer { lock.unlock() }
+        return try result!.get()
+    }
+    #endif
+
+    throw BridgeKitStoreKitError.storeKitUnavailable
+}
+
+private func restorePurchasesSynchronously() throws -> [BridgeKitTransactionResponse] {
+    #if canImport(StoreKit)
+    if #available(iOS 15.0, macOS 12.0, *) {
+        let semaphore = DispatchSemaphore(value: 0)
+        let lock = NSLock()
+        var result: Result<[BridgeKitTransactionResponse], Error>?
+
+        Task.detached {
+            do {
+                var transactions: [BridgeKitTransactionResponse] = []
+                for await verificationResult in Transaction.currentEntitlements {
+                    switch verificationResult {
+                    case .verified(let transaction):
+                        transactions.append(
+                            BridgeKitTransactionResponse(
+                                transaction: transaction,
+                                state: "restored",
+                                verification: "verified"
+                            )
+                        )
+                    case .unverified(let transaction, _):
+                        transactions.append(
+                            BridgeKitTransactionResponse(
+                                transaction: transaction,
+                                state: "failed",
+                                verification: "unverified"
+                            )
+                        )
+                    }
+                }
+                lock.lock()
+                result = .success(transactions)
                 lock.unlock()
             } catch {
                 lock.lock()

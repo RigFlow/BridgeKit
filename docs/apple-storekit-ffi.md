@@ -1,8 +1,8 @@
 # Apple StoreKit FFI
 
-BridgeKit includes native StoreKit integration points for product lookup and
-purchase. They are compiled only for macOS/iOS and only when the
-`apple-storekit-ffi` feature is enabled.
+BridgeKit includes native StoreKit integration points for product lookup,
+purchase, and restore purchases. They are compiled only for macOS/iOS and only
+when the `apple-storekit-ffi` feature is enabled.
 
 The repository includes a Swift implementation of this ABI at
 `native/apple/BridgeKitStoreKit`. See
@@ -20,6 +20,8 @@ With that feature enabled:
   calls a native C ABI symbol, and parses `Vec<AppleProduct>`.
 - `NativeAppleStoreKitClient::purchase` serializes an `ApplePurchaseRequest`,
   calls a native C ABI symbol, and parses `AppleTransaction`.
+- `NativeAppleStoreKitClient::restore_purchases` calls a native C ABI symbol and
+  parses `Vec<AppleTransaction>`.
 
 Other Apple native operations still return `ProviderUnavailable` until their
 native bindings are implemented.
@@ -31,6 +33,7 @@ The consuming Apple app or native support library must export:
 ```c
 char *bridgekit_storekit_products_json(const char *request_json);
 char *bridgekit_storekit_purchase_json(const char *request_json);
+char *bridgekit_storekit_restore_purchases_json(void);
 void bridgekit_string_free(char *value);
 ```
 
@@ -120,6 +123,33 @@ Return an `AppleTransaction` value:
 User-cancelled purchases should return `state: "cancelled"`. Pending StoreKit
 purchases are mapped to `state: "deferred"`.
 
+## Restore purchases response JSON
+
+`bridgekit_storekit_restore_purchases_json` takes no request body. Return an
+array of `AppleTransaction` values representing the user's current StoreKit
+entitlements:
+
+```json
+[
+  {
+    "transactionId": "100000000000002",
+    "productId": "pro.monthly",
+    "state": "restored",
+    "signedTransactionJws": "signed-transaction-jws",
+    "originalTransactionId": "100000000000000",
+    "purchasedAtMs": 1700000000000,
+    "expiresAtMs": 1702592000000,
+    "raw": {
+      "source": "storekit",
+      "verification": "verified"
+    }
+  }
+]
+```
+
+Verified current entitlements should use `state: "restored"`. Unverified
+entitlements should use `state: "failed"`.
+
 ## StoreKit implementation notes
 
 The native implementation should use StoreKit 2 product lookup:
@@ -132,6 +162,14 @@ Purchases should use StoreKit 2 purchase:
 
 ```swift
 let result = try await product.purchase(options: options)
+```
+
+Restore purchases should enumerate StoreKit 2 current entitlements:
+
+```swift
+for await verificationResult in Transaction.currentEntitlements {
+    // map verified entitlements to restored transactions
+}
 ```
 
 Map StoreKit products into the response JSON above. Include StoreKit-native

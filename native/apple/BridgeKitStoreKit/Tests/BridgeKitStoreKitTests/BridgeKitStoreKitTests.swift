@@ -13,4 +13,14 @@ final class BridgeKitStoreKitTests: XCTestCase {
         }
         XCTAssertEqual(String(cString: response!), "[]")
     }
+
+    func testRestorePurchasesReturnsEmptyArrayWhenNoEntitlements() {
+        let response = bridgekitStoreKitRestorePurchasesJson()
+
+        XCTAssertNotNil(response)
+        defer {
+            bridgekitStringFree(response)
+        }
+        XCTAssertEqual(String(cString: response!), "[]")
+    }
 }

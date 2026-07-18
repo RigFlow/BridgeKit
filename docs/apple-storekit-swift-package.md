@@ -1,13 +1,15 @@
 # Apple StoreKit Swift package
 
 `native/apple/BridgeKitStoreKit` is a Swift package that implements the first
-BridgeKit Apple native slices: StoreKit 2 product lookup and purchase.
+BridgeKit Apple native slices: StoreKit 2 product lookup, purchase, and restore
+purchases.
 
 It exports the C ABI expected by the Rust `apple-storekit-ffi` feature:
 
 ```c
 char *bridgekit_storekit_products_json(const char *request_json);
 char *bridgekit_storekit_purchase_json(const char *request_json);
+char *bridgekit_storekit_restore_purchases_json(void);
 void bridgekit_string_free(char *value);
 ```
 
@@ -28,11 +30,18 @@ void bridgekit_string_free(char *value);
 4. maps StoreKit purchase results into BridgeKit `AppleTransaction` JSON
 5. returns a newly allocated UTF-8 C string
 
+`bridgekit_storekit_restore_purchases_json`:
+
+1. enumerates StoreKit 2 `Transaction.currentEntitlements`
+2. maps verified entitlements into BridgeKit `AppleTransaction` JSON with
+   `state: "restored"`
+3. returns a newly allocated UTF-8 C string containing a JSON array
+
 `bridgekit_string_free` releases strings returned by the package.
 
-The current implementation covers product lookup and purchase. Restore, receipt
-validation, and APNs registration still return `ProviderUnavailable` from the
-Rust scaffolds.
+The current implementation covers product lookup, purchase, and restore.
+Receipt validation and APNs registration still return `ProviderUnavailable`
+from the Rust scaffolds.
 
 ## Link from a Tauri Apple app
 
@@ -84,6 +93,19 @@ states:
 
 For verified transactions, the package calls `transaction.finish()` before
 returning the response.
+
+## Restore response mapping
+
+The Swift package maps StoreKit current entitlements to BridgeKit transaction
+states:
+
+| StoreKit entitlement | BridgeKit state |
+| --- | --- |
+| verified entitlement | `restored` |
+| unverified entitlement | `failed` |
+
+Restore does not call `transaction.finish()` because it reads existing
+entitlements rather than completing a new purchase flow.
 
 ## Validate on Apple hardware
 

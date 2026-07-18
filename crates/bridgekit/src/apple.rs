@@ -494,7 +494,7 @@ pub mod native {
         }
 
         async fn restore_purchases(&self) -> Result<Vec<AppleTransaction>> {
-            unavailable("StoreKit restore purchases")
+            storekit_restore_purchases()
         }
 
         async fn validate_receipt(
@@ -626,10 +626,46 @@ pub mod native {
         serde_json::from_str(response_json).map_err(Into::into)
     }
 
+    #[cfg(not(feature = "apple-storekit-ffi"))]
+    fn storekit_restore_purchases() -> Result<Vec<AppleTransaction>> {
+        Err(BridgeKitError::ProviderUnavailable(
+            "StoreKit restore purchases native Apple bindings are not enabled; enable the \
+             `apple-storekit-ffi` feature and provide the BridgeKit StoreKit FFI symbols"
+                .into(),
+        ))
+    }
+
+    #[cfg(feature = "apple-storekit-ffi")]
+    fn storekit_restore_purchases() -> Result<Vec<AppleTransaction>> {
+        let response = unsafe { bridgekit_storekit_restore_purchases_json() };
+        if response.is_null() {
+            return Err(BridgeKitError::ProviderUnavailable(
+                "StoreKit restore purchases native bridge returned a null response".into(),
+            ));
+        }
+
+        let response_json = unsafe {
+            let response_json = CStr::from_ptr(response)
+                .to_str()
+                .map(str::to_owned)
+                .map_err(|error| BridgeKitError::Native(error.to_string()));
+            bridgekit_string_free(response);
+            response_json
+        }?;
+
+        parse_storekit_transactions_json(&response_json)
+    }
+
+    #[cfg(feature = "apple-storekit-ffi")]
+    fn parse_storekit_transactions_json(response_json: &str) -> Result<Vec<AppleTransaction>> {
+        serde_json::from_str(response_json).map_err(Into::into)
+    }
+
     #[cfg(feature = "apple-storekit-ffi")]
     unsafe extern "C" {
         fn bridgekit_storekit_products_json(request_json: *const c_char) -> *mut c_char;
         fn bridgekit_storekit_purchase_json(request_json: *const c_char) -> *mut c_char;
+        fn bridgekit_storekit_restore_purchases_json() -> *mut c_char;
         fn bridgekit_string_free(value: *mut c_char);
     }
 }
@@ -687,5 +723,30 @@ mod tests {
             transaction.signed_transaction_jws.as_deref(),
             Some("signed-transaction-jws")
         );
+    }
+
+    #[test]
+    fn apple_restored_transactions_json_matches_native_ffi_contract() {
+        let json = r#"[
+          {
+            "transactionId": "100000000000002",
+            "productId": "pro.monthly",
+            "state": "restored",
+            "signedTransactionJws": "signed-transaction-jws",
+            "originalTransactionId": "100000000000000",
+            "purchasedAtMs": 1700000000000,
+            "expiresAtMs": 1702592000000,
+            "raw": {
+              "source": "storekit",
+              "verification": "verified"
+            }
+          }
+        ]"#;
+
+        let transactions: Vec<AppleTransaction> =
+            serde_json::from_str(json).expect("native StoreKit restore JSON should parse");
+        assert_eq!(transactions.len(), 1);
+        assert_eq!(transactions[0].transaction_id, "100000000000002");
+        assert_eq!(transactions[0].state, AppleTransactionState::Restored);
     }
 }

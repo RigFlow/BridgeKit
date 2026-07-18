@@ -468,6 +468,10 @@ impl PushProvider for ApplePushProvider {
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 pub mod native {
     use super::*;
+    #[cfg(feature = "apple-storekit-ffi")]
+    use std::ffi::{CStr, CString};
+    #[cfg(feature = "apple-storekit-ffi")]
+    use std::os::raw::c_char;
 
     #[derive(Debug, Clone, Default)]
     pub struct NativeAppleStoreKitClient;
@@ -481,8 +485,8 @@ pub mod native {
 
     #[async_trait]
     impl AppleStoreKitClient for NativeAppleStoreKitClient {
-        async fn products(&self, _request: AppleProductRequest) -> Result<Vec<AppleProduct>> {
-            unavailable("StoreKit product lookup")
+        async fn products(&self, request: AppleProductRequest) -> Result<Vec<AppleProduct>> {
+            storekit_products(request)
         }
 
         async fn purchase(&self, _request: ApplePurchaseRequest) -> Result<AppleTransaction> {
@@ -536,5 +540,82 @@ pub mod native {
         Err(BridgeKitError::ProviderUnavailable(format!(
             "{operation} native Apple bindings are not implemented yet"
         )))
+    }
+
+    #[cfg(not(feature = "apple-storekit-ffi"))]
+    fn storekit_products(_request: AppleProductRequest) -> Result<Vec<AppleProduct>> {
+        Err(BridgeKitError::ProviderUnavailable(
+            "StoreKit product lookup native Apple bindings are not enabled; enable the \
+             `apple-storekit-ffi` feature and provide the BridgeKit StoreKit FFI symbols"
+                .into(),
+        ))
+    }
+
+    #[cfg(feature = "apple-storekit-ffi")]
+    fn storekit_products(request: AppleProductRequest) -> Result<Vec<AppleProduct>> {
+        let request_json = serde_json::to_string(&request)?;
+        let request_json = CString::new(request_json).map_err(|_| {
+            BridgeKitError::InvalidRequest(
+                "StoreKit product lookup request contained an interior NUL byte".into(),
+            )
+        })?;
+
+        let response = unsafe { bridgekit_storekit_products_json(request_json.as_ptr()) };
+        if response.is_null() {
+            return Err(BridgeKitError::ProviderUnavailable(
+                "StoreKit product lookup native bridge returned a null response".into(),
+            ));
+        }
+
+        let response_json = unsafe {
+            let response_json = CStr::from_ptr(response)
+                .to_str()
+                .map(str::to_owned)
+                .map_err(|error| BridgeKitError::Native(error.to_string()));
+            bridgekit_string_free(response);
+            response_json
+        }?;
+
+        parse_storekit_products_json(&response_json)
+    }
+
+    #[cfg(feature = "apple-storekit-ffi")]
+    fn parse_storekit_products_json(response_json: &str) -> Result<Vec<AppleProduct>> {
+        serde_json::from_str(response_json).map_err(Into::into)
+    }
+
+    #[cfg(feature = "apple-storekit-ffi")]
+    unsafe extern "C" {
+        fn bridgekit_storekit_products_json(request_json: *const c_char) -> *mut c_char;
+        fn bridgekit_string_free(value: *mut c_char);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn apple_product_json_matches_native_ffi_contract() {
+        let json = r#"[
+          {
+            "id": "pro.monthly",
+            "localizedTitle": "Pro Monthly",
+            "localizedDescription": "Monthly Pro access",
+            "displayPrice": "$4.99",
+            "currencyCode": "USD",
+            "subscriptionPeriod": "P1M",
+            "trialPeriod": "P7D",
+            "raw": {
+              "source": "storekit"
+            }
+          }
+        ]"#;
+
+        let products: Vec<AppleProduct> =
+            serde_json::from_str(json).expect("native StoreKit JSON should parse");
+        assert_eq!(products[0].id, "pro.monthly");
+        assert_eq!(products[0].localized_title, "Pro Monthly");
+        assert_eq!(products[0].subscription_period.as_deref(), Some("P1M"));
     }
 }

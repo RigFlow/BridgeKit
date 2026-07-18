@@ -179,6 +179,9 @@ See [`docs/native-scaffolds.md`](docs/native-scaffolds.md) for the platform-gate
 native client scaffolds selected by `BridgeKit::native()` on Apple and Windows
 targets.
 
+See [`docs/apple-storekit-ffi.md`](docs/apple-storekit-ffi.md) for the
+feature-gated Apple StoreKit product lookup FFI contract.
+
 See [`docs/tauri-plugin.md`](docs/tauri-plugin.md) for the plugin commands and
 frontend invocation examples.
 

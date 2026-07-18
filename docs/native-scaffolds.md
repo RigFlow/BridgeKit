@@ -27,8 +27,13 @@ Scaffold clients:
 let bridgekit = bridgekit::BridgeKit::native();
 ```
 
-Until native bindings are implemented, StoreKit and APNs operations return
-`BridgeKitError::ProviderUnavailable` with an operation-specific message.
+StoreKit product lookup has a feature-gated FFI integration point behind
+`apple-storekit-ffi`. See [`apple-storekit-ffi.md`](apple-storekit-ffi.md) for
+the ABI and JSON contract.
+
+Other StoreKit and APNs operations return
+`BridgeKitError::ProviderUnavailable` with an operation-specific message until
+their native bindings are implemented.
 
 ### Required Apple setup
 
@@ -47,7 +52,7 @@ Real Apple implementations will need:
 
 Fill in:
 
-- `NativeAppleStoreKitClient::products`
+- `NativeAppleStoreKitClient::products` via the `apple-storekit-ffi` symbols
 - `NativeAppleStoreKitClient::purchase`
 - `NativeAppleStoreKitClient::restore_purchases`
 - `NativeAppleStoreKitClient::validate_receipt`

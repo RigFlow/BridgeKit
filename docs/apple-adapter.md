@@ -15,6 +15,10 @@ BridgeKit also exposes macOS/iOS-gated native scaffold clients under
 `bridgekit::apple::native`. See [`native-scaffolds.md`](native-scaffolds.md) for
 the current placeholder wiring and required Apple capabilities.
 
+StoreKit product lookup has a feature-gated native FFI path. See
+[`apple-storekit-ffi.md`](apple-storekit-ffi.md) for the required symbols and
+JSON contract.
+
 ## Wiring
 
 ```rust

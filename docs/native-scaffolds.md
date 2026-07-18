@@ -97,9 +97,14 @@ Scaffold clients:
 let bridgekit = bridgekit::BridgeKit::native();
 ```
 
-Until native bindings are implemented, Microsoft Store and WNS operations return
+On Windows, enable `microsoft-store-ffi` and/or `microsoft-wns-ffi` to activate the
+WinRT bindings. Without those features, Microsoft Store and WNS operations return
 `BridgeKitError::ProviderUnavailable` with an operation-specific message.
 
+Microsoft Store and WNS WinRT bindings are available on Windows behind
+`microsoft-store-ffi` and `microsoft-wns-ffi`. See
+[`microsoft-store-ffi.md`](microsoft-store-ffi.md) and
+[`microsoft-wns-ffi.md`](microsoft-wns-ffi.md).
 ### Required Microsoft setup
 
 Real Microsoft implementations will need:
@@ -115,15 +120,16 @@ Real Microsoft implementations will need:
 
 ### Implementation points
 
-Fill in:
+The WinRT bindings are implemented in:
 
-- `NativeMicrosoftStoreClient::products`
-- `NativeMicrosoftStoreClient::purchase`
-- `NativeMicrosoftStoreClient::restore_purchases`
-- `NativeMicrosoftStoreClient::validate_license`
-- `NativeMicrosoftPushClient::request_authorization`
-- `NativeMicrosoftPushClient::register`
-- `NativeMicrosoftPushClient::unregister`
+- `bridgekit::winrt_store` for Microsoft Store operations
+- `bridgekit::winrt_wns` for WNS operations
+
+Enable these features in the consuming Tauri app's `Cargo.toml`:
+
+```toml
+bridgekit = { features = ["microsoft-store-ffi", "microsoft-wns-ffi"] }
+```
 
 The native layer should normalize Microsoft Store/WNS outputs into the existing
 `bridgekit::microsoft` request and response structs before returning them.

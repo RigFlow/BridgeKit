@@ -12,9 +12,15 @@ API layer. The host app or plugin can implement these traits with WinRT,
 Microsoft Store services, or another native bridge that is available in signed
 Microsoft Store builds.
 
-BridgeKit also exposes Windows-gated native scaffold clients under
+BridgeKit also exposes Windows-gated native clients under
 `bridgekit::microsoft::native`. See [`native-scaffolds.md`](native-scaffolds.md)
-for the current placeholder wiring and required Microsoft Store/WNS setup.
+for the current wiring and required Microsoft Store/WNS setup.
+
+Microsoft Store operations are implemented with WinRT bindings behind
+`microsoft-store-ffi`. See [`microsoft-store-ffi.md`](microsoft-store-ffi.md).
+
+WNS operations are implemented with WinRT bindings behind `microsoft-wns-ffi`. See
+[`microsoft-wns-ffi.md`](microsoft-wns-ffi.md).
 
 ## Wiring
 
@@ -32,8 +38,8 @@ fn create_bridgekit(
 ```
 
 Use `BridgeKit::microsoft(...)` when the host app has concrete Microsoft Store
-and WNS clients. `BridgeKit::native()` remains an explicit unsupported default
-until first-party native clients are linked.
+and WNS clients. `BridgeKit::native()` uses the Windows native clients on
+Windows when the corresponding FFI features are enabled.
 
 ## Microsoft Store client responsibilities
 

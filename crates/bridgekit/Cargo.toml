@@ -16,6 +16,18 @@ thiserror = "2.0.18"
 default = []
 apple-storekit-ffi = []
 apple-apns-ffi = []
+microsoft-store-ffi = []
+microsoft-wns-ffi = []
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.58", features = [
+    "Foundation",
+    "Foundation_Collections",
+    "Services_Store",
+    "UI_Notifications",
+] }
+windows-collections = "0.1"
+windows-core = "0.58"
 
 [dev-dependencies]
 futures = "0.3.32"

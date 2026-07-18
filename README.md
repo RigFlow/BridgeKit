@@ -215,6 +215,9 @@ Microsoft Store/WNS Tauri example.
 See [`docs/server-side-validation.md`](docs/server-side-validation.md) for
 backend receipt and license validation guidance.
 
+See [`docs/hardware-test-checklist.md`](docs/hardware-test-checklist.md) for
+on-device Store and push validation on Apple and Windows hardware.
+
 ## Local development
 
 Use mocks to exercise app flows before store credentials and signed builds are

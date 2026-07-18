@@ -80,3 +80,28 @@ Validate add-on ownership with Microsoft Store collections and license APIs:
 
 On-device `validateReceipt` is useful for quick entitlement checks, but server
 validation remains the source of truth for account-based access control.
+
+## Rust server helpers
+
+BridgeKit provides optional backend helpers behind Cargo features:
+
+```toml
+[dependencies]
+bridgekit = { git = "https://github.com/RigFlow/BridgeKit", features = ["server-apple", "server-microsoft"] }
+```
+
+### Apple (`server-apple`)
+
+- `bridgekit::server::apple::generate_app_store_jwt` — signs a short-lived JWT
+  for App Store Server API requests
+- `bridgekit::server::apple::get_transaction_info` — fetches
+  `signedTransactionInfo` for a transaction ID
+
+### Microsoft (`server-microsoft`)
+
+- `bridgekit::server::microsoft::MicrosoftCollectionsClient` — queries the
+  Microsoft Store collections API for owned products
+
+These helpers expect your backend to supply App Store Connect credentials or a
+Microsoft identity bearer token. They do not replace account management or
+entitlement storage in your own database.

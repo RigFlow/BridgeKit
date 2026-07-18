@@ -21,6 +21,16 @@ The example calls `bridgekit::set_store_window_handle` during Tauri setup so
 `StoreContext` can present purchase UI from desktop and Tauri hosts. This uses
 WinRT `IInitializeWithWindow`.
 
+The example also calls `bridgekit::set_store_context_for_current_windows_user`
+so Store requests use `StoreContext::GetForUser` for the current Windows user.
+This is recommended for Desktop Bridge hosts and multi-user environments.
+
+## WNS channel caching
+
+BridgeKit caches the WNS channel URI and refreshes it automatically when the
+channel is within 24 hours of expiry. Repeated `register_push` calls reuse the
+cached channel until refresh is needed.
+
 ## Required setup
 
 - Partner Center app record with matching package identity
@@ -39,3 +49,5 @@ npm run tauri dev
 
 Store and WNS flows require Windows hardware and a signed package with the
 correct Store identity.
+
+For a full validation pass, see [`hardware-test-checklist.md`](hardware-test-checklist.md).

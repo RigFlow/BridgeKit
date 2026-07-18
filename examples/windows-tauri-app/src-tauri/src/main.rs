@@ -17,6 +17,7 @@ fn configure_store_context(app: &mut tauri::App) -> Result<(), Box<dyn std::erro
         .ok_or("main window was not created")?;
     let hwnd = window.hwnd()?;
     bridgekit::set_store_window_handle(hwnd.0 as isize);
+    bridgekit::set_store_context_for_current_windows_user()?;
     Ok(())
 }
 

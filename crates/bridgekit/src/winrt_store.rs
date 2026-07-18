@@ -12,6 +12,7 @@ use windows::Services::Store::{
     StoreContext, StoreDurationUnit, StoreProduct, StorePurchaseStatus, StorePurchaseResult,
     StoreSku,
 };
+use windows::System::User;
 use windows::Win32::Foundation::HWND;
 use windows::Win32::UI::Shell::IInitializeWithWindow;
 use windows_collections::IIterable;
@@ -25,10 +26,20 @@ const PRODUCT_KINDS: &[&str] = &[
 ];
 
 static STORE_OWNER_HWND: OnceLock<isize> = OnceLock::new();
+static STORE_USER: OnceLock<User> = OnceLock::new();
 
 /// Associates the owner `HWND` used by Microsoft Store purchase UI.
 pub fn set_store_window_handle(hwnd: isize) {
     let _ = STORE_OWNER_HWND.set(hwnd);
+}
+
+/// Resolves the current Windows user and uses `StoreContext::GetForUser` for
+/// subsequent Store requests.
+pub fn set_store_context_for_current_windows_user() -> Result<()> {
+    let user = current_windows_user()?;
+    STORE_USER
+        .set(user)
+        .map_err(|_| BridgeKitError::Native("Microsoft Store user context is already set".into()))
 }
 
 pub fn products(request: MicrosoftProductRequest) -> Result<Vec<MicrosoftProduct>> {
@@ -168,11 +179,34 @@ pub fn validate_license(
 }
 
 fn store_context() -> Result<StoreContext> {
-    let context = StoreContext::GetDefault().map_err(map_winrt_error)?;
+    let context = if let Some(user) = STORE_USER.get() {
+        StoreContext::GetForUser(user).map_err(map_winrt_error)?
+    } else {
+        StoreContext::GetDefault().map_err(map_winrt_error)?
+    };
+
     if let Some(hwnd) = STORE_OWNER_HWND.get() {
         initialize_store_context(&context, *hwnd)?;
     }
     Ok(context)
+}
+
+fn current_windows_user() -> Result<User> {
+    let users = User::FindAllAsync()
+        .map_err(map_winrt_error)?
+        .get()
+        .map_err(map_winrt_error)?;
+
+    for user in users {
+        if user.Type().map_err(map_winrt_error)? == windows::System::UserType::LocalUser {
+            return Ok(user);
+        }
+    }
+
+    users
+        .into_iter()
+        .next()
+        .ok_or_else(|| BridgeKitError::Native("no Windows user is available for StoreContext".into()))
 }
 
 fn initialize_store_context(context: &StoreContext, hwnd: isize) -> Result<()> {

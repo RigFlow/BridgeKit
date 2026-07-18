@@ -99,6 +99,15 @@ bridgekit::set_store_window_handle(hwnd);
 BridgeKit uses WinRT `IInitializeWithWindow` so `StoreContext` can present
 purchase dialogs from desktop processes.
 
+For Desktop Bridge and multi-user hosts, call
+`bridgekit::set_store_context_for_current_windows_user()` during startup so
+BridgeKit uses `StoreContext::GetForUser` instead of `GetDefault()`:
+
+```rust
+bridgekit::set_store_window_handle(hwnd);
+bridgekit::set_store_context_for_current_windows_user()?;
+```
+
 If the Tauri app uses the Desktop Bridge, the host app may also need additional
 `StoreContext` initialization for the current user. See Microsoft's
 [StoreContext guidance for desktop apps](https://learn.microsoft.com/en-us/windows/uwp/monetize/in-app-purchases-and-trials#use-the-storecontext-class-in-desktop-apps).

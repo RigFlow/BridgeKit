@@ -3,6 +3,9 @@ use crate::iap::{
     Product, ProductRequest, Purchase, PurchaseRequest, ReceiptValidationRequest,
     ReceiptValidationResult, StoreProvider,
 };
+use crate::microsoft::{
+    MicrosoftPushClient, MicrosoftPushProvider, MicrosoftStoreClient, MicrosoftStoreProvider,
+};
 use crate::push::{
     PushAuthorization, PushAuthorizationRequest, PushProvider, PushRegistration,
     PushRegistrationRequest,
@@ -33,6 +36,17 @@ impl BridgeKit {
         Self::with_providers(
             Arc::new(AppleStoreProvider::new(storekit)),
             Arc::new(ApplePushProvider::new(apns)),
+        )
+    }
+
+    #[must_use]
+    pub fn microsoft(
+        store: Arc<dyn MicrosoftStoreClient>,
+        wns: Arc<dyn MicrosoftPushClient>,
+    ) -> Self {
+        Self::with_providers(
+            Arc::new(MicrosoftStoreProvider::new(store)),
+            Arc::new(MicrosoftPushProvider::new(wns)),
         )
     }
 

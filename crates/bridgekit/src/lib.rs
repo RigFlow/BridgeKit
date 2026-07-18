@@ -11,6 +11,7 @@ pub mod apple;
 mod bridge;
 mod error;
 pub mod iap;
+pub mod microsoft;
 pub mod mock;
 mod platform;
 pub mod push;

@@ -51,6 +51,12 @@ When an app has concrete Apple StoreKit/APNs clients, wire them directly:
 let bridgekit = BridgeKit::apple(storekit_client, apns_client);
 ```
 
+When an app has concrete Microsoft Store/WNS clients, wire them directly:
+
+```rust
+let bridgekit = BridgeKit::microsoft(store_client, wns_client);
+```
+
 Expose the bridge through Tauri commands:
 
 ```rust
@@ -141,7 +147,10 @@ predictable while Apple and Microsoft native adapters are linked in store
 builds.
 
 See [`docs/apple-adapter.md`](docs/apple-adapter.md) for the Apple StoreKit/APNs
-adapter boundary that is now available under `bridgekit::apple`.
+adapter boundary that is available under `bridgekit::apple`.
+
+See [`docs/microsoft-adapter.md`](docs/microsoft-adapter.md) for the Microsoft
+Store/WNS adapter boundary that is available under `bridgekit::microsoft`.
 
 ## Local development
 

@@ -1,0 +1,21 @@
+{
+  "name": "bridgekit-mock-tauri-app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json && vite build",
+    "dev": "vite --host 127.0.0.1",
+    "tauri": "tauri",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@bridgekit/tauri": "file:../../packages/bridgekit-js",
+    "@tauri-apps/api": "^2.11.1"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.11.1",
+    "typescript": "^7.0.2",
+    "vite": "^7.1.0"
+  }
+}

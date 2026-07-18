@@ -2,6 +2,7 @@
   "name": "bridgekit-workspace",
   "private": true,
   "workspaces": [
+    "examples/*",
     "packages/*"
   ],
   "scripts": {

@@ -1,5 +1,9 @@
 [workspace]
-members = ["crates/bridgekit", "crates/tauri-plugin-bridgekit"]
+members = [
+  "crates/bridgekit",
+  "crates/tauri-plugin-bridgekit",
+  "examples/mock-tauri-app/src-tauri",
+]
 resolver = "2"
 
 [workspace.package]

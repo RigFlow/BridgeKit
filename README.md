@@ -20,12 +20,14 @@ changing app-facing Tauri commands.
 crates/bridgekit
 crates/tauri-plugin-bridgekit
 packages/bridgekit-js
+examples/mock-tauri-app
 ```
 
 `bridgekit` is the Rust library intended to be imported by Tauri apps.
 `tauri-plugin-bridgekit` registers BridgeKit state and exposes standard Tauri
 commands.
 `@bridgekit/tauri` is the TypeScript frontend SDK for those plugin commands.
+`examples/mock-tauri-app` demonstrates the full mock stack in a Tauri app.
 
 ## Quick start
 
@@ -178,6 +180,9 @@ frontend invocation examples.
 
 See [`docs/typescript-sdk.md`](docs/typescript-sdk.md) for typed frontend
 helpers such as `purchase(...)` and `registerPush(...)`.
+
+See [`docs/mock-tauri-app.md`](docs/mock-tauri-app.md) for a runnable mock app
+that wires the Rust mocks, Tauri plugin, and TypeScript SDK together.
 
 ## Local development
 

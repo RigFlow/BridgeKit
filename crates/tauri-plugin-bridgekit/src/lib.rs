@@ -43,7 +43,7 @@ pub fn init<R: Runtime>(bridgekit: BridgeKit) -> TauriPlugin<R> {
 }
 
 #[tauri::command]
-pub async fn bridgekit_products(
+async fn bridgekit_products(
     state: State<'_, BridgeKitState>,
     request: ProductRequest,
 ) -> CommandResult<Vec<Product>> {
@@ -55,7 +55,7 @@ pub async fn bridgekit_products(
 }
 
 #[tauri::command]
-pub async fn bridgekit_purchase(
+async fn bridgekit_purchase(
     state: State<'_, BridgeKitState>,
     request: PurchaseRequest,
 ) -> CommandResult<Purchase> {
@@ -67,7 +67,7 @@ pub async fn bridgekit_purchase(
 }
 
 #[tauri::command]
-pub async fn bridgekit_restore_purchases(
+async fn bridgekit_restore_purchases(
     state: State<'_, BridgeKitState>,
 ) -> CommandResult<Vec<Purchase>> {
     state
@@ -78,7 +78,7 @@ pub async fn bridgekit_restore_purchases(
 }
 
 #[tauri::command]
-pub async fn bridgekit_validate_receipt(
+async fn bridgekit_validate_receipt(
     state: State<'_, BridgeKitState>,
     request: ReceiptValidationRequest,
 ) -> CommandResult<ReceiptValidationResult> {
@@ -90,7 +90,7 @@ pub async fn bridgekit_validate_receipt(
 }
 
 #[tauri::command]
-pub async fn bridgekit_request_push_authorization(
+async fn bridgekit_request_push_authorization(
     state: State<'_, BridgeKitState>,
     request: PushAuthorizationRequest,
 ) -> CommandResult<PushAuthorization> {
@@ -102,7 +102,7 @@ pub async fn bridgekit_request_push_authorization(
 }
 
 #[tauri::command]
-pub async fn bridgekit_register_push(
+async fn bridgekit_register_push(
     state: State<'_, BridgeKitState>,
     request: PushRegistrationRequest,
 ) -> CommandResult<PushRegistration> {
@@ -114,7 +114,7 @@ pub async fn bridgekit_register_push(
 }
 
 #[tauri::command]
-pub async fn bridgekit_unregister_push(state: State<'_, BridgeKitState>) -> CommandResult<()> {
+async fn bridgekit_unregister_push(state: State<'_, BridgeKitState>) -> CommandResult<()> {
     state
         .bridgekit()
         .unregister_push()

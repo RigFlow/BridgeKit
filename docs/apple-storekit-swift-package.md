@@ -18,6 +18,7 @@ char *bridgekit_apns_request_authorization_json(const char *request_json);
 char *bridgekit_apns_register_json(const char *request_json);
 void bridgekit_apns_unregister(void);
 void bridgekit_apns_forward_device_token_hex(const char *token_hex);
+void bridgekit_apple_bootstrap(void);
 void bridgekit_string_free(char *value);
 ```
 
@@ -72,6 +73,10 @@ void bridgekit_string_free(char *value);
 
 `bridgekit_apns_unregister` clears cached token state and unregisters from
 remote notifications on iOS.
+
+`bridgekit_apple_bootstrap` installs a BridgeKit app delegate that forwards APNs
+device tokens to `bridgekit_apns_forward_device_token_hex`. Tauri apps should
+call `bridgekit::bootstrap_apple_runtime()` during startup.
 
 `bridgekit_string_free` releases strings returned by the package.
 

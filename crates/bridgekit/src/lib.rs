@@ -15,6 +15,8 @@ pub mod microsoft;
 pub mod mock;
 mod platform;
 pub mod push;
+#[cfg(any(feature = "server-apple", feature = "server-microsoft"))]
+pub mod server;
 mod unsupported;
 #[cfg(windows)]
 mod winrt_store;
@@ -40,4 +42,30 @@ pub use push::{
 #[cfg(windows)]
 pub fn set_store_window_handle(hwnd: isize) {
     winrt_store::set_store_window_handle(hwnd);
+}
+
+/// Resolves the current Windows user and uses `StoreContext::GetForUser` for
+/// subsequent Microsoft Store requests.
+///
+/// Desktop Bridge and multi-user hosts should call this during startup in
+/// addition to [`set_store_window_handle`].
+#[cfg(windows)]
+pub fn set_store_context_for_current_windows_user() -> Result<()> {
+    winrt_store::set_store_context_for_current_windows_user()
+}
+
+/// Installs the BridgeKit Apple app delegate hooks required for APNs token
+/// forwarding.
+///
+/// Tauri Apple apps should call this during startup before registering for push
+/// notifications.
+#[cfg(any(target_os = "macos", target_os = "ios"))]
+pub fn bootstrap_apple_runtime() {
+    unsafe extern "C" {
+        fn bridgekit_apple_bootstrap();
+    }
+
+    unsafe {
+        bridgekit_apple_bootstrap();
+    }
 }

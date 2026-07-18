@@ -1,8 +1,12 @@
+#[cfg(any(target_os = "macos", target_os = "ios"))]
+use crate::apple::native::{NativeApplePushClient, NativeAppleStoreKitClient};
 use crate::apple::{ApplePushClient, ApplePushProvider, AppleStoreKitClient, AppleStoreProvider};
 use crate::iap::{
     Product, ProductRequest, Purchase, PurchaseRequest, ReceiptValidationRequest,
     ReceiptValidationResult, StoreProvider,
 };
+#[cfg(target_os = "windows")]
+use crate::microsoft::native::{NativeMicrosoftPushClient, NativeMicrosoftStoreClient};
 use crate::microsoft::{
     MicrosoftPushClient, MicrosoftPushProvider, MicrosoftStoreClient, MicrosoftStoreProvider,
 };
@@ -28,7 +32,26 @@ impl BridgeKit {
 
     #[must_use]
     pub fn native() -> Self {
-        Self::builder().build()
+        #[cfg(any(target_os = "macos", target_os = "ios"))]
+        {
+            Self::apple(
+                Arc::new(NativeAppleStoreKitClient::new()),
+                Arc::new(NativeApplePushClient::new()),
+            )
+        }
+
+        #[cfg(target_os = "windows")]
+        {
+            Self::microsoft(
+                Arc::new(NativeMicrosoftStoreClient::new()),
+                Arc::new(NativeMicrosoftPushClient::new()),
+            )
+        }
+
+        #[cfg(not(any(target_os = "macos", target_os = "ios", target_os = "windows")))]
+        {
+            Self::builder().build()
+        }
     }
 
     #[must_use]

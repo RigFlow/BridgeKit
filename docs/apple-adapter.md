@@ -11,6 +11,10 @@ This keeps the public Tauri command API stable while allowing the platform code
 to live in the layer that can actually talk to Apple frameworks, such as a Tauri
 plugin, Swift package, or macOS/iOS app delegate integration.
 
+BridgeKit also exposes macOS/iOS-gated native scaffold clients under
+`bridgekit::apple::native`. See [`native-scaffolds.md`](native-scaffolds.md) for
+the current placeholder wiring and required Apple capabilities.
+
 ## Wiring
 
 ```rust

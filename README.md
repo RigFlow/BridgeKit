@@ -175,6 +175,10 @@ adapter boundary that is available under `bridgekit::apple`.
 See [`docs/microsoft-adapter.md`](docs/microsoft-adapter.md) for the Microsoft
 Store/WNS adapter boundary that is available under `bridgekit::microsoft`.
 
+See [`docs/native-scaffolds.md`](docs/native-scaffolds.md) for the platform-gated
+native client scaffolds selected by `BridgeKit::native()` on Apple and Windows
+targets.
+
 See [`docs/tauri-plugin.md`](docs/tauri-plugin.md) for the plugin commands and
 frontend invocation examples.
 

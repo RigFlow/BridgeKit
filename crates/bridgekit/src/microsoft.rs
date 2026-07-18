@@ -468,3 +468,80 @@ impl PushProvider for MicrosoftPushProvider {
         self.client.unregister().await
     }
 }
+
+#[cfg(target_os = "windows")]
+pub mod native {
+    use super::*;
+
+    #[derive(Debug, Clone, Default)]
+    pub struct NativeMicrosoftStoreClient;
+
+    impl NativeMicrosoftStoreClient {
+        #[must_use]
+        pub const fn new() -> Self {
+            Self
+        }
+    }
+
+    #[async_trait]
+    impl MicrosoftStoreClient for NativeMicrosoftStoreClient {
+        async fn products(
+            &self,
+            _request: MicrosoftProductRequest,
+        ) -> Result<Vec<MicrosoftProduct>> {
+            unavailable("Microsoft Store product lookup")
+        }
+
+        async fn purchase(&self, _request: MicrosoftPurchaseRequest) -> Result<MicrosoftPurchase> {
+            unavailable("Microsoft Store purchase")
+        }
+
+        async fn restore_purchases(&self) -> Result<Vec<MicrosoftPurchase>> {
+            unavailable("Microsoft Store restore purchases")
+        }
+
+        async fn validate_license(
+            &self,
+            _request: MicrosoftLicenseValidationRequest,
+        ) -> Result<MicrosoftLicenseValidationResult> {
+            unavailable("Microsoft Store license validation")
+        }
+    }
+
+    #[derive(Debug, Clone, Default)]
+    pub struct NativeMicrosoftPushClient;
+
+    impl NativeMicrosoftPushClient {
+        #[must_use]
+        pub const fn new() -> Self {
+            Self
+        }
+    }
+
+    #[async_trait]
+    impl MicrosoftPushClient for NativeMicrosoftPushClient {
+        async fn request_authorization(
+            &self,
+            _request: MicrosoftPushAuthorizationRequest,
+        ) -> Result<MicrosoftPushAuthorization> {
+            unavailable("WNS notification authorization")
+        }
+
+        async fn register(
+            &self,
+            _request: MicrosoftPushRegistrationRequest,
+        ) -> Result<MicrosoftPushRegistration> {
+            unavailable("WNS channel URI registration")
+        }
+
+        async fn unregister(&self) -> Result<()> {
+            unavailable("WNS unregister")
+        }
+    }
+
+    fn unavailable<T>(operation: &str) -> Result<T> {
+        Err(BridgeKitError::ProviderUnavailable(format!(
+            "{operation} native Microsoft bindings are not implemented yet"
+        )))
+    }
+}

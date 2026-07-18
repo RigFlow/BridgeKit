@@ -12,6 +12,10 @@ API layer. The host app or plugin can implement these traits with WinRT,
 Microsoft Store services, or another native bridge that is available in signed
 Microsoft Store builds.
 
+BridgeKit also exposes Windows-gated native scaffold clients under
+`bridgekit::microsoft::native`. See [`native-scaffolds.md`](native-scaffolds.md)
+for the current placeholder wiring and required Microsoft Store/WNS setup.
+
 ## Wiring
 
 ```rust

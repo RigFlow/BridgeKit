@@ -464,3 +464,77 @@ impl PushProvider for ApplePushProvider {
         self.client.unregister().await
     }
 }
+
+#[cfg(any(target_os = "macos", target_os = "ios"))]
+pub mod native {
+    use super::*;
+
+    #[derive(Debug, Clone, Default)]
+    pub struct NativeAppleStoreKitClient;
+
+    impl NativeAppleStoreKitClient {
+        #[must_use]
+        pub const fn new() -> Self {
+            Self
+        }
+    }
+
+    #[async_trait]
+    impl AppleStoreKitClient for NativeAppleStoreKitClient {
+        async fn products(&self, _request: AppleProductRequest) -> Result<Vec<AppleProduct>> {
+            unavailable("StoreKit product lookup")
+        }
+
+        async fn purchase(&self, _request: ApplePurchaseRequest) -> Result<AppleTransaction> {
+            unavailable("StoreKit purchase")
+        }
+
+        async fn restore_purchases(&self) -> Result<Vec<AppleTransaction>> {
+            unavailable("StoreKit restore purchases")
+        }
+
+        async fn validate_receipt(
+            &self,
+            _request: AppleReceiptValidationRequest,
+        ) -> Result<AppleReceiptValidationResult> {
+            unavailable("App Store receipt validation")
+        }
+    }
+
+    #[derive(Debug, Clone, Default)]
+    pub struct NativeApplePushClient;
+
+    impl NativeApplePushClient {
+        #[must_use]
+        pub const fn new() -> Self {
+            Self
+        }
+    }
+
+    #[async_trait]
+    impl ApplePushClient for NativeApplePushClient {
+        async fn request_authorization(
+            &self,
+            _request: ApplePushAuthorizationRequest,
+        ) -> Result<ApplePushAuthorization> {
+            unavailable("APNs notification authorization")
+        }
+
+        async fn register(
+            &self,
+            _request: ApplePushRegistrationRequest,
+        ) -> Result<ApplePushRegistration> {
+            unavailable("APNs device token registration")
+        }
+
+        async fn unregister(&self) -> Result<()> {
+            unavailable("APNs unregister")
+        }
+    }
+
+    fn unavailable<T>(operation: &str) -> Result<T> {
+        Err(BridgeKitError::ProviderUnavailable(format!(
+            "{operation} native Apple bindings are not implemented yet"
+        )))
+    }
+}

@@ -3,6 +3,10 @@
     "exactOptionalPropertyTypes": true,
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
+    "baseUrl": ".",
+    "paths": {
+      "@bridgekit/tauri": ["../../packages/bridgekit-js/src/index.ts"]
+    },
     "strict": true,
     "target": "ES2022",
     "verbatimModuleSyntax": true

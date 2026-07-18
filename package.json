@@ -2,8 +2,8 @@
   "name": "bridgekit-workspace",
   "private": true,
   "workspaces": [
-    "examples/*",
-    "packages/*"
+    "packages/*",
+    "examples/*"
   ],
   "scripts": {
     "build": "npm run build --workspaces",

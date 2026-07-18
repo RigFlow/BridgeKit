@@ -1,12 +1,13 @@
 # Apple StoreKit Swift package
 
 `native/apple/BridgeKitStoreKit` is a Swift package that implements the first
-BridgeKit Apple native slice: StoreKit 2 product lookup.
+BridgeKit Apple native slices: StoreKit 2 product lookup and purchase.
 
 It exports the C ABI expected by the Rust `apple-storekit-ffi` feature:
 
 ```c
 char *bridgekit_storekit_products_json(const char *request_json);
+char *bridgekit_storekit_purchase_json(const char *request_json);
 void bridgekit_string_free(char *value);
 ```
 
@@ -19,11 +20,19 @@ void bridgekit_string_free(char *value);
 3. maps StoreKit products into BridgeKit `AppleProduct` JSON
 4. returns a newly allocated UTF-8 C string
 
+`bridgekit_storekit_purchase_json`:
+
+1. decodes `ApplePurchaseRequest` JSON from Rust
+2. loads the requested StoreKit product
+3. calls `product.purchase(options:)`
+4. maps StoreKit purchase results into BridgeKit `AppleTransaction` JSON
+5. returns a newly allocated UTF-8 C string
+
 `bridgekit_string_free` releases strings returned by the package.
 
-The current implementation only covers product lookup. Purchase, restore,
-receipt validation, and APNs registration still return `ProviderUnavailable`
-from the Rust scaffolds.
+The current implementation covers product lookup and purchase. Restore, receipt
+validation, and APNs registration still return `ProviderUnavailable` from the
+Rust scaffolds.
 
 ## Link from a Tauri Apple app
 
@@ -60,6 +69,22 @@ The Swift package maps StoreKit values to BridgeKit fields:
 | `raw.source` | `storekit` |
 | `raw.type` | StoreKit product type |
 
+## Purchase response mapping
+
+The Swift package maps StoreKit purchase results to BridgeKit transaction
+states:
+
+| StoreKit result | BridgeKit state |
+| --- | --- |
+| verified success | `purchased` |
+| unverified success | `failed` |
+| user cancelled | `cancelled` |
+| pending | `deferred` |
+| unknown result | `failed` |
+
+For verified transactions, the package calls `transaction.finish()` before
+returning the response.
+
 ## Validate on Apple hardware
 
 From `native/apple/BridgeKitStoreKit` on macOS:
@@ -76,3 +101,6 @@ Runtime product lookup also requires:
 - product IDs matching requests from the Tauri app
 - a signed app with the matching bundle identifier
 - a sandbox account or StoreKit testing configuration
+
+Runtime purchase testing additionally requires products to be cleared for
+sandbox testing and a StoreKit flow that can present App Store purchase UI.

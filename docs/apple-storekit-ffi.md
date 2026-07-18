@@ -1,8 +1,8 @@
-# Apple StoreKit FFI product lookup
+# Apple StoreKit FFI
 
-BridgeKit includes a first native StoreKit integration point for product lookup.
-It is compiled only for macOS/iOS and only when the `apple-storekit-ffi` feature
-is enabled.
+BridgeKit includes native StoreKit integration points for product lookup and
+purchase. They are compiled only for macOS/iOS and only when the
+`apple-storekit-ffi` feature is enabled.
 
 The repository includes a Swift implementation of this ABI at
 `native/apple/BridgeKitStoreKit`. See
@@ -14,9 +14,12 @@ instructions.
 bridgekit = { git = "https://github.com/RigFlow/BridgeKit", features = ["apple-storekit-ffi"] }
 ```
 
-With that feature enabled, `NativeAppleStoreKitClient::products` serializes an
-`AppleProductRequest` to JSON, calls a native C ABI symbol, and parses the
-returned JSON into `Vec<AppleProduct>`.
+With that feature enabled:
+
+- `NativeAppleStoreKitClient::products` serializes an `AppleProductRequest`,
+  calls a native C ABI symbol, and parses `Vec<AppleProduct>`.
+- `NativeAppleStoreKitClient::purchase` serializes an `ApplePurchaseRequest`,
+  calls a native C ABI symbol, and parses `AppleTransaction`.
 
 Other Apple native operations still return `ProviderUnavailable` until their
 native bindings are implemented.
@@ -27,17 +30,18 @@ The consuming Apple app or native support library must export:
 
 ```c
 char *bridgekit_storekit_products_json(const char *request_json);
+char *bridgekit_storekit_purchase_json(const char *request_json);
 void bridgekit_string_free(char *value);
 ```
 
 Ownership contract:
 
 - `request_json` is a borrowed UTF-8 JSON string owned by Rust.
-- `bridgekit_storekit_products_json` returns a newly allocated UTF-8 JSON string.
+- StoreKit functions return newly allocated UTF-8 JSON strings.
 - Rust calls `bridgekit_string_free` exactly once for non-null returned strings.
 - Returning null is treated as `ProviderUnavailable`.
 
-## Request JSON
+## Product request JSON
 
 The request is `AppleProductRequest` with camelCase fields:
 
@@ -51,7 +55,7 @@ The request is `AppleProductRequest` with camelCase fields:
 }
 ```
 
-## Response JSON
+## Product response JSON
 
 Return an array of `AppleProduct` values:
 
@@ -75,12 +79,59 @@ Return an array of `AppleProduct` values:
 `subscriptionPeriod`, `introductoryPrice`, and `trialPeriod` are optional.
 Periods should use ISO 8601 durations such as `P1M` or `P1Y`.
 
+## Purchase request JSON
+
+The request is `ApplePurchaseRequest` with camelCase fields:
+
+```json
+{
+  "productId": "pro.monthly",
+  "quantity": 1,
+  "appAccountToken": "4b5f5e4f-1e59-4326-90cc-13485c5fdbd4",
+  "metadata": {
+    "optional": true
+  }
+}
+```
+
+`appAccountToken` should be a UUID string when the Swift implementation should
+pass it through to StoreKit's `Product.PurchaseOption.appAccountToken`.
+
+## Purchase response JSON
+
+Return an `AppleTransaction` value:
+
+```json
+{
+  "transactionId": "100000000000001",
+  "productId": "pro.monthly",
+  "state": "purchased",
+  "signedTransactionJws": "signed-transaction-jws",
+  "originalTransactionId": "100000000000000",
+  "purchasedAtMs": 1700000000000,
+  "expiresAtMs": 1702592000000,
+  "raw": {
+    "source": "storekit",
+    "verification": "verified"
+  }
+}
+```
+
+User-cancelled purchases should return `state: "cancelled"`. Pending StoreKit
+purchases are mapped to `state: "deferred"`.
+
 ## StoreKit implementation notes
 
 The native implementation should use StoreKit 2 product lookup:
 
 ```swift
 let products = try await Product.products(for: productIds)
+```
+
+Purchases should use StoreKit 2 purchase:
+
+```swift
+let result = try await product.purchase(options: options)
 ```
 
 Map StoreKit products into the response JSON above. Include StoreKit-native

@@ -27,9 +27,9 @@ Scaffold clients:
 let bridgekit = bridgekit::BridgeKit::native();
 ```
 
-StoreKit product lookup has a feature-gated FFI integration point behind
-`apple-storekit-ffi`. See [`apple-storekit-ffi.md`](apple-storekit-ffi.md) for
-the ABI and JSON contract.
+StoreKit product lookup and purchase have feature-gated FFI integration points
+behind `apple-storekit-ffi`. See
+[`apple-storekit-ffi.md`](apple-storekit-ffi.md) for the ABI and JSON contract.
 
 The Swift package at `native/apple/BridgeKitStoreKit` implements that ABI. See
 [`apple-storekit-swift-package.md`](apple-storekit-swift-package.md) for Apple
@@ -57,7 +57,7 @@ Real Apple implementations will need:
 Fill in:
 
 - `NativeAppleStoreKitClient::products` via the `apple-storekit-ffi` symbols
-- `NativeAppleStoreKitClient::purchase`
+- `NativeAppleStoreKitClient::purchase` via the `apple-storekit-ffi` symbols
 - `NativeAppleStoreKitClient::restore_purchases`
 - `NativeAppleStoreKitClient::validate_receipt`
 - `NativeApplePushClient::request_authorization`

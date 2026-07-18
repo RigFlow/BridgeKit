@@ -489,8 +489,8 @@ pub mod native {
             storekit_products(request)
         }
 
-        async fn purchase(&self, _request: ApplePurchaseRequest) -> Result<AppleTransaction> {
-            unavailable("StoreKit purchase")
+        async fn purchase(&self, request: ApplePurchaseRequest) -> Result<AppleTransaction> {
+            storekit_purchase(request)
         }
 
         async fn restore_purchases(&self) -> Result<Vec<AppleTransaction>> {
@@ -584,9 +584,52 @@ pub mod native {
         serde_json::from_str(response_json).map_err(Into::into)
     }
 
+    #[cfg(not(feature = "apple-storekit-ffi"))]
+    fn storekit_purchase(_request: ApplePurchaseRequest) -> Result<AppleTransaction> {
+        Err(BridgeKitError::ProviderUnavailable(
+            "StoreKit purchase native Apple bindings are not enabled; enable the \
+             `apple-storekit-ffi` feature and provide the BridgeKit StoreKit FFI symbols"
+                .into(),
+        ))
+    }
+
+    #[cfg(feature = "apple-storekit-ffi")]
+    fn storekit_purchase(request: ApplePurchaseRequest) -> Result<AppleTransaction> {
+        let request_json = serde_json::to_string(&request)?;
+        let request_json = CString::new(request_json).map_err(|_| {
+            BridgeKitError::InvalidRequest(
+                "StoreKit purchase request contained an interior NUL byte".into(),
+            )
+        })?;
+
+        let response = unsafe { bridgekit_storekit_purchase_json(request_json.as_ptr()) };
+        if response.is_null() {
+            return Err(BridgeKitError::ProviderUnavailable(
+                "StoreKit purchase native bridge returned a null response".into(),
+            ));
+        }
+
+        let response_json = unsafe {
+            let response_json = CStr::from_ptr(response)
+                .to_str()
+                .map(str::to_owned)
+                .map_err(|error| BridgeKitError::Native(error.to_string()));
+            bridgekit_string_free(response);
+            response_json
+        }?;
+
+        parse_storekit_transaction_json(&response_json)
+    }
+
+    #[cfg(feature = "apple-storekit-ffi")]
+    fn parse_storekit_transaction_json(response_json: &str) -> Result<AppleTransaction> {
+        serde_json::from_str(response_json).map_err(Into::into)
+    }
+
     #[cfg(feature = "apple-storekit-ffi")]
     unsafe extern "C" {
         fn bridgekit_storekit_products_json(request_json: *const c_char) -> *mut c_char;
+        fn bridgekit_storekit_purchase_json(request_json: *const c_char) -> *mut c_char;
         fn bridgekit_string_free(value: *mut c_char);
     }
 }
@@ -617,5 +660,32 @@ mod tests {
         assert_eq!(products[0].id, "pro.monthly");
         assert_eq!(products[0].localized_title, "Pro Monthly");
         assert_eq!(products[0].subscription_period.as_deref(), Some("P1M"));
+    }
+
+    #[test]
+    fn apple_transaction_json_matches_native_ffi_contract() {
+        let json = r#"{
+          "transactionId": "100000000000001",
+          "productId": "pro.monthly",
+          "state": "purchased",
+          "signedTransactionJws": "signed-transaction-jws",
+          "originalTransactionId": "100000000000000",
+          "purchasedAtMs": 1700000000000,
+          "expiresAtMs": 1702592000000,
+          "raw": {
+            "source": "storekit",
+            "verification": "verified"
+          }
+        }"#;
+
+        let transaction: AppleTransaction =
+            serde_json::from_str(json).expect("native StoreKit transaction JSON should parse");
+        assert_eq!(transaction.transaction_id, "100000000000001");
+        assert_eq!(transaction.product_id, "pro.monthly");
+        assert_eq!(transaction.state, AppleTransactionState::Purchased);
+        assert_eq!(
+            transaction.signed_transaction_jws.as_deref(),
+            Some("signed-transaction-jws")
+        );
     }
 }

@@ -468,9 +468,9 @@ impl PushProvider for ApplePushProvider {
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 pub mod native {
     use super::*;
-    #[cfg(feature = "apple-storekit-ffi")]
+    #[cfg(any(feature = "apple-storekit-ffi", feature = "apple-apns-ffi"))]
     use std::ffi::{CStr, CString};
-    #[cfg(feature = "apple-storekit-ffi")]
+    #[cfg(any(feature = "apple-storekit-ffi", feature = "apple-apns-ffi"))]
     use std::os::raw::c_char;
 
     #[derive(Debug, Clone, Default)]
@@ -499,9 +499,9 @@ pub mod native {
 
         async fn validate_receipt(
             &self,
-            _request: AppleReceiptValidationRequest,
+            request: AppleReceiptValidationRequest,
         ) -> Result<AppleReceiptValidationResult> {
-            unavailable("App Store receipt validation")
+            storekit_validate_receipt(request)
         }
     }
 
@@ -519,20 +519,20 @@ pub mod native {
     impl ApplePushClient for NativeApplePushClient {
         async fn request_authorization(
             &self,
-            _request: ApplePushAuthorizationRequest,
+            request: ApplePushAuthorizationRequest,
         ) -> Result<ApplePushAuthorization> {
-            unavailable("APNs notification authorization")
+            apns_request_authorization(request)
         }
 
         async fn register(
             &self,
-            _request: ApplePushRegistrationRequest,
+            request: ApplePushRegistrationRequest,
         ) -> Result<ApplePushRegistration> {
-            unavailable("APNs device token registration")
+            apns_register(request)
         }
 
         async fn unregister(&self) -> Result<()> {
-            unavailable("APNs unregister")
+            apns_unregister()
         }
     }
 
@@ -661,12 +661,179 @@ pub mod native {
         serde_json::from_str(response_json).map_err(Into::into)
     }
 
+    #[cfg(not(feature = "apple-storekit-ffi"))]
+    fn storekit_validate_receipt(
+        _request: AppleReceiptValidationRequest,
+    ) -> Result<AppleReceiptValidationResult> {
+        Err(BridgeKitError::ProviderUnavailable(
+            "StoreKit receipt validation native Apple bindings are not enabled; enable the \
+             `apple-storekit-ffi` feature and provide the BridgeKit StoreKit FFI symbols"
+                .into(),
+        ))
+    }
+
+    #[cfg(feature = "apple-storekit-ffi")]
+    fn storekit_validate_receipt(
+        request: AppleReceiptValidationRequest,
+    ) -> Result<AppleReceiptValidationResult> {
+        let request_json = serde_json::to_string(&request)?;
+        let request_json = CString::new(request_json).map_err(|_| {
+            BridgeKitError::InvalidRequest(
+                "StoreKit receipt validation request contained an interior NUL byte".into(),
+            )
+        })?;
+
+        let response = unsafe { bridgekit_storekit_validate_receipt_json(request_json.as_ptr()) };
+        if response.is_null() {
+            return Err(BridgeKitError::ProviderUnavailable(
+                "StoreKit receipt validation native bridge returned a null response".into(),
+            ));
+        }
+
+        let response_json = unsafe {
+            let response_json = CStr::from_ptr(response)
+                .to_str()
+                .map(str::to_owned)
+                .map_err(|error| BridgeKitError::Native(error.to_string()));
+            bridgekit_string_free(response);
+            response_json
+        }?;
+
+        parse_storekit_receipt_validation_json(&response_json)
+    }
+
+    #[cfg(feature = "apple-storekit-ffi")]
+    fn parse_storekit_receipt_validation_json(
+        response_json: &str,
+    ) -> Result<AppleReceiptValidationResult> {
+        serde_json::from_str(response_json).map_err(Into::into)
+    }
+
+    #[cfg(not(feature = "apple-apns-ffi"))]
+    fn apns_request_authorization(
+        _request: ApplePushAuthorizationRequest,
+    ) -> Result<ApplePushAuthorization> {
+        Err(BridgeKitError::ProviderUnavailable(
+            "APNs authorization native Apple bindings are not enabled; enable the \
+             `apple-apns-ffi` feature and provide the BridgeKit APNs FFI symbols"
+                .into(),
+        ))
+    }
+
+    #[cfg(feature = "apple-apns-ffi")]
+    fn apns_request_authorization(
+        request: ApplePushAuthorizationRequest,
+    ) -> Result<ApplePushAuthorization> {
+        let request_json = serde_json::to_string(&request)?;
+        let request_json = CString::new(request_json).map_err(|_| {
+            BridgeKitError::InvalidRequest(
+                "APNs authorization request contained an interior NUL byte".into(),
+            )
+        })?;
+
+        let response = unsafe { bridgekit_apns_request_authorization_json(request_json.as_ptr()) };
+        if response.is_null() {
+            return Err(BridgeKitError::ProviderUnavailable(
+                "APNs authorization native bridge returned a null response".into(),
+            ));
+        }
+
+        let response_json = unsafe {
+            let response_json = CStr::from_ptr(response)
+                .to_str()
+                .map(str::to_owned)
+                .map_err(|error| BridgeKitError::Native(error.to_string()));
+            bridgekit_string_free(response);
+            response_json
+        }?;
+
+        parse_apns_authorization_json(&response_json)
+    }
+
+    #[cfg(feature = "apple-apns-ffi")]
+    fn parse_apns_authorization_json(response_json: &str) -> Result<ApplePushAuthorization> {
+        serde_json::from_str(response_json).map_err(Into::into)
+    }
+
+    #[cfg(not(feature = "apple-apns-ffi"))]
+    fn apns_register(_request: ApplePushRegistrationRequest) -> Result<ApplePushRegistration> {
+        Err(BridgeKitError::ProviderUnavailable(
+            "APNs registration native Apple bindings are not enabled; enable the \
+             `apple-apns-ffi` feature and provide the BridgeKit APNs FFI symbols"
+                .into(),
+        ))
+    }
+
+    #[cfg(feature = "apple-apns-ffi")]
+    fn apns_register(request: ApplePushRegistrationRequest) -> Result<ApplePushRegistration> {
+        let request_json = serde_json::to_string(&request)?;
+        let request_json = CString::new(request_json).map_err(|_| {
+            BridgeKitError::InvalidRequest(
+                "APNs registration request contained an interior NUL byte".into(),
+            )
+        })?;
+
+        let response = unsafe { bridgekit_apns_register_json(request_json.as_ptr()) };
+        if response.is_null() {
+            return Err(BridgeKitError::ProviderUnavailable(
+                "APNs registration native bridge returned a null response".into(),
+            ));
+        }
+
+        let response_json = unsafe {
+            let response_json = CStr::from_ptr(response)
+                .to_str()
+                .map(str::to_owned)
+                .map_err(|error| BridgeKitError::Native(error.to_string()));
+            bridgekit_string_free(response);
+            response_json
+        }?;
+
+        parse_apns_registration_json(&response_json)
+    }
+
+    #[cfg(feature = "apple-apns-ffi")]
+    fn parse_apns_registration_json(response_json: &str) -> Result<ApplePushRegistration> {
+        serde_json::from_str(response_json).map_err(Into::into)
+    }
+
+    #[cfg(not(feature = "apple-apns-ffi"))]
+    fn apns_unregister() -> Result<()> {
+        Err(BridgeKitError::ProviderUnavailable(
+            "APNs unregister native Apple bindings are not enabled; enable the `apple-apns-ffi` \
+             feature and provide the BridgeKit APNs FFI symbols"
+                .into(),
+        ))
+    }
+
+    #[cfg(feature = "apple-apns-ffi")]
+    fn apns_unregister() -> Result<()> {
+        unsafe { bridgekit_apns_unregister() };
+        Ok(())
+    }
+
     #[cfg(feature = "apple-storekit-ffi")]
     unsafe extern "C" {
         fn bridgekit_storekit_products_json(request_json: *const c_char) -> *mut c_char;
         fn bridgekit_storekit_purchase_json(request_json: *const c_char) -> *mut c_char;
         fn bridgekit_storekit_restore_purchases_json() -> *mut c_char;
+        fn bridgekit_storekit_validate_receipt_json(request_json: *const c_char) -> *mut c_char;
         fn bridgekit_string_free(value: *mut c_char);
+    }
+
+    #[cfg(all(feature = "apple-apns-ffi", not(feature = "apple-storekit-ffi")))]
+    unsafe extern "C" {
+        fn bridgekit_apns_request_authorization_json(request_json: *const c_char) -> *mut c_char;
+        fn bridgekit_apns_register_json(request_json: *const c_char) -> *mut c_char;
+        fn bridgekit_apns_unregister();
+        fn bridgekit_string_free(value: *mut c_char);
+    }
+
+    #[cfg(all(feature = "apple-apns-ffi", feature = "apple-storekit-ffi"))]
+    unsafe extern "C" {
+        fn bridgekit_apns_request_authorization_json(request_json: *const c_char) -> *mut c_char;
+        fn bridgekit_apns_register_json(request_json: *const c_char) -> *mut c_char;
+        fn bridgekit_apns_unregister();
     }
 }
 
@@ -748,5 +915,55 @@ mod tests {
         assert_eq!(transactions.len(), 1);
         assert_eq!(transactions[0].transaction_id, "100000000000002");
         assert_eq!(transactions[0].state, AppleTransactionState::Restored);
+    }
+
+    #[test]
+    fn apple_receipt_validation_json_matches_native_ffi_contract() {
+        let json = r#"{
+          "isValid": true,
+          "productId": "pro.monthly",
+          "transactionId": "100000000000001",
+          "expiresAtMs": 1702592000000,
+          "raw": {
+            "source": "storekit",
+            "verification": "verified"
+          }
+        }"#;
+
+        let result: AppleReceiptValidationResult =
+            serde_json::from_str(json).expect("native StoreKit receipt validation JSON should parse");
+        assert!(result.is_valid);
+        assert_eq!(result.product_id.as_deref(), Some("pro.monthly"));
+        assert_eq!(result.transaction_id.as_deref(), Some("100000000000001"));
+    }
+
+    #[test]
+    fn apple_push_authorization_json_matches_native_ffi_contract() {
+        let json = r#"{
+          "status": "authorized",
+          "metadata": {
+            "source": "apns"
+          }
+        }"#;
+
+        let authorization: ApplePushAuthorization =
+            serde_json::from_str(json).expect("native APNs authorization JSON should parse");
+        assert_eq!(authorization.status, PushAuthorizationStatus::Authorized);
+    }
+
+    #[test]
+    fn apple_push_registration_json_matches_native_ffi_contract() {
+        let json = r#"{
+          "deviceToken": "apns-device-token",
+          "environment": "production",
+          "raw": {
+            "source": "apns"
+          }
+        }"#;
+
+        let registration: ApplePushRegistration =
+            serde_json::from_str(json).expect("native APNs registration JSON should parse");
+        assert_eq!(registration.device_token, "apns-device-token");
+        assert_eq!(registration.environment, Some(AppleEnvironment::Production));
     }
 }

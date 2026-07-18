@@ -22,6 +22,9 @@ With that feature enabled:
   calls a native C ABI symbol, and parses `AppleTransaction`.
 - `NativeAppleStoreKitClient::restore_purchases` calls a native C ABI symbol and
   parses `Vec<AppleTransaction>`.
+- `NativeAppleStoreKitClient::validate_receipt` serializes an
+  `AppleReceiptValidationRequest`, calls a native C ABI symbol, and parses
+  `AppleReceiptValidationResult`.
 
 Other Apple native operations still return `ProviderUnavailable` until their
 native bindings are implemented.
@@ -34,6 +37,7 @@ The consuming Apple app or native support library must export:
 char *bridgekit_storekit_products_json(const char *request_json);
 char *bridgekit_storekit_purchase_json(const char *request_json);
 char *bridgekit_storekit_restore_purchases_json(void);
+char *bridgekit_storekit_validate_receipt_json(const char *request_json);
 void bridgekit_string_free(char *value);
 ```
 
@@ -150,6 +154,45 @@ entitlements:
 Verified current entitlements should use `state: "restored"`. Unverified
 entitlements should use `state: "failed"`.
 
+## Receipt validation request JSON
+
+The request is `AppleReceiptValidationRequest` with camelCase fields:
+
+```json
+{
+  "receipt": "signed-transaction-jws",
+  "transactionId": "100000000000001",
+  "productId": "pro.monthly",
+  "environment": "sandbox",
+  "metadata": {
+    "optional": true
+  }
+}
+```
+
+`receipt` should contain a StoreKit 2 signed transaction JWS when validating on
+device. `transactionId` and `productId` are optional filters.
+
+## Receipt validation response JSON
+
+Return an `AppleReceiptValidationResult` value:
+
+```json
+{
+  "isValid": true,
+  "productId": "pro.monthly",
+  "transactionId": "100000000000001",
+  "expiresAtMs": 1702592000000,
+  "raw": {
+    "source": "storekit",
+    "verification": "verified"
+  }
+}
+```
+
+When no matching verified transaction is found, return `isValid: false` with
+`raw.verification: "not_found"`.
+
 ## StoreKit implementation notes
 
 The native implementation should use StoreKit 2 product lookup:
@@ -169,6 +212,18 @@ Restore purchases should enumerate StoreKit 2 current entitlements:
 ```swift
 for await verificationResult in Transaction.currentEntitlements {
     // map verified entitlements to restored transactions
+}
+```
+
+Receipt validation should match the request against verified StoreKit 2
+transactions from current entitlements and transaction history:
+
+```swift
+for await verificationResult in Transaction.currentEntitlements {
+    // compare signed transaction JWS or transaction/product identifiers
+}
+for await verificationResult in Transaction.all {
+    // compare signed transaction JWS or transaction/product identifiers
 }
 ```
 

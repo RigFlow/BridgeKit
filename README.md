@@ -183,11 +183,14 @@ native client scaffolds selected by `BridgeKit::native()` on Apple and Windows
 targets.
 
 See [`docs/apple-storekit-ffi.md`](docs/apple-storekit-ffi.md) for the
-feature-gated Apple StoreKit product lookup, purchase, and restore FFI contract.
+feature-gated Apple StoreKit product lookup, purchase, restore, and receipt
+validation FFI contract.
+
+See [`docs/apple-apns-ffi.md`](docs/apple-apns-ffi.md) for the feature-gated
+Apple APNs authorization, registration, and unregister FFI contract.
 
 See [`docs/apple-storekit-swift-package.md`](docs/apple-storekit-swift-package.md)
-for linking the Swift StoreKit product lookup, purchase, and restore
-implementation.
+for linking the Swift StoreKit and APNs implementation.
 
 See [`docs/tauri-plugin.md`](docs/tauri-plugin.md) for the plugin commands and
 frontend invocation examples.

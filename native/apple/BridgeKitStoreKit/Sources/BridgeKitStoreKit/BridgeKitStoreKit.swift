@@ -80,6 +80,48 @@ public func bridgekitStoreKitRestorePurchasesJson() -> UnsafeMutablePointer<CCha
     }
 }
 
+private struct BridgeKitReceiptValidationRequest: Decodable {
+    let receipt: String
+    let transactionId: String?
+    let productId: String?
+    let environment: String?
+}
+
+private struct BridgeKitReceiptValidationResponse: Encodable {
+    let isValid: Bool
+    let productId: String?
+    let transactionId: String?
+    let expiresAtMs: Int64?
+    let raw: [String: String]
+}
+
+@_cdecl("bridgekit_storekit_validate_receipt_json")
+public func bridgekitStoreKitValidateReceiptJson(
+    _ requestJson: UnsafePointer<CChar>?
+) -> UnsafeMutablePointer<CChar>? {
+    guard let requestJson else {
+        return nil
+    }
+
+    let requestString = String(cString: requestJson)
+
+    do {
+        let requestData = Data(requestString.utf8)
+        let request = try JSONDecoder().decode(
+            BridgeKitReceiptValidationRequest.self,
+            from: requestData
+        )
+        let response = try validateReceiptSynchronously(request: request)
+        let responseData = try JSONEncoder.bridgeKit.encode(response)
+        guard let responseString = String(data: responseData, encoding: .utf8) else {
+            return nil
+        }
+        return strdup(responseString)
+    } catch {
+        return nil
+    }
+}
+
 @_cdecl("bridgekit_storekit_purchase_json")
 public func bridgekitStoreKitPurchaseJson(_ requestJson: UnsafePointer<CChar>?) -> UnsafeMutablePointer<CChar>? {
     guard let requestJson else {
@@ -194,6 +236,39 @@ private func restorePurchasesSynchronously() throws -> [BridgeKitTransactionResp
     throw BridgeKitStoreKitError.storeKitUnavailable
 }
 
+private func validateReceiptSynchronously(
+    request: BridgeKitReceiptValidationRequest
+) throws -> BridgeKitReceiptValidationResponse {
+    #if canImport(StoreKit)
+    if #available(iOS 15.0, macOS 12.0, *) {
+        let semaphore = DispatchSemaphore(value: 0)
+        let lock = NSLock()
+        var result: Result<BridgeKitReceiptValidationResponse, Error>?
+
+        Task.detached {
+            do {
+                let response = try await findValidatedReceipt(request: request)
+                lock.lock()
+                result = .success(response)
+                lock.unlock()
+            } catch {
+                lock.lock()
+                result = .failure(error)
+                lock.unlock()
+            }
+            semaphore.signal()
+        }
+
+        semaphore.wait()
+        lock.lock()
+        defer { lock.unlock() }
+        return try result!.get()
+    }
+    #endif
+
+    throw BridgeKitStoreKitError.storeKitUnavailable
+}
+
 private func purchaseSynchronously(request: BridgeKitPurchaseRequest) throws -> BridgeKitTransactionResponse {
     #if canImport(StoreKit)
     if #available(iOS 15.0, macOS 12.0, *) {
@@ -245,7 +320,7 @@ private enum BridgeKitStoreKitError: Error {
     case productNotFound(String)
 }
 
-private extension JSONEncoder {
+extension JSONEncoder {
     static var bridgeKit: JSONEncoder {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
@@ -254,6 +329,93 @@ private extension JSONEncoder {
 }
 
 #if canImport(StoreKit)
+@available(iOS 15.0, macOS 12.0, *)
+private func findValidatedReceipt(
+    request: BridgeKitReceiptValidationRequest
+) async throws -> BridgeKitReceiptValidationResponse {
+    for await verificationResult in Transaction.currentEntitlements {
+        if let response = matchReceiptValidation(
+            verificationResult: verificationResult,
+            request: request
+        ) {
+            return response
+        }
+    }
+
+    for await verificationResult in Transaction.all {
+        if let response = matchReceiptValidation(
+            verificationResult: verificationResult,
+            request: request
+        ) {
+            return response
+        }
+    }
+
+    return BridgeKitReceiptValidationResponse(
+        isValid: false,
+        productId: request.productId,
+        transactionId: request.transactionId,
+        expiresAtMs: nil,
+        raw: [
+            "source": "storekit",
+            "verification": "not_found"
+        ]
+    )
+}
+
+@available(iOS 15.0, macOS 12.0, *)
+private func matchReceiptValidation(
+    verificationResult: VerificationResult<Transaction>,
+    request: BridgeKitReceiptValidationRequest
+) -> BridgeKitReceiptValidationResponse? {
+    switch verificationResult {
+    case .verified(let transaction):
+        let signedTransactionJws = String(data: transaction.jsonRepresentation, encoding: .utf8)
+        let matchesReceipt = signedTransactionJws == request.receipt
+        let matchesTransactionId = request.transactionId.map {
+            String(transaction.id) == $0 || String(transaction.originalID) == $0
+        } ?? false
+        let matchesProductId = request.productId.map { transaction.productID == $0 } ?? true
+
+        guard matchesReceipt || (request.transactionId != nil && matchesTransactionId && matchesProductId) else {
+            return nil
+        }
+
+        return BridgeKitReceiptValidationResponse(
+            isValid: true,
+            productId: transaction.productID,
+            transactionId: String(transaction.id),
+            expiresAtMs: transaction.expirationDate?.bridgeKitMillisecondsSince1970,
+            raw: [
+                "source": "storekit",
+                "verification": "verified"
+            ]
+        )
+    case .unverified(let transaction):
+        let signedTransactionJws = String(data: transaction.jsonRepresentation, encoding: .utf8)
+        let matchesReceipt = signedTransactionJws == request.receipt
+        let matchesTransactionId = request.transactionId.map {
+            String(transaction.id) == $0 || String(transaction.originalID) == $0
+        } ?? false
+        let matchesProductId = request.productId.map { transaction.productID == $0 } ?? true
+
+        guard matchesReceipt || (request.transactionId != nil && matchesTransactionId && matchesProductId) else {
+            return nil
+        }
+
+        return BridgeKitReceiptValidationResponse(
+            isValid: false,
+            productId: transaction.productID,
+            transactionId: String(transaction.id),
+            expiresAtMs: transaction.expirationDate?.bridgeKitMillisecondsSince1970,
+            raw: [
+                "source": "storekit",
+                "verification": "unverified"
+            ]
+        )
+    }
+}
+
 @available(iOS 15.0, macOS 12.0, *)
 private extension BridgeKitProductResponse {
     init(storeKitProduct product: Product) {

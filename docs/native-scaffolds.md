@@ -27,12 +27,16 @@ Scaffold clients:
 let bridgekit = bridgekit::BridgeKit::native();
 ```
 
-StoreKit product lookup and purchase have feature-gated FFI integration points
-behind `apple-storekit-ffi`. See
+StoreKit product lookup, purchase, restore purchases, and receipt validation have
+feature-gated FFI integration points behind `apple-storekit-ffi`. See
 [`apple-storekit-ffi.md`](apple-storekit-ffi.md) for the ABI and JSON contract.
 
-The Swift package at `native/apple/BridgeKitStoreKit` implements that ABI. See
-[`apple-storekit-swift-package.md`](apple-storekit-swift-package.md) for Apple
+APNs authorization, registration, and unregister have feature-gated FFI
+integration points behind `apple-apns-ffi`. See
+[`apple-apns-ffi.md`](apple-apns-ffi.md) for the ABI and JSON contract.
+
+The Swift package at `native/apple/BridgeKitStoreKit` implements those ABIs.
+See [`apple-storekit-swift-package.md`](apple-storekit-swift-package.md) for Apple
 linking instructions.
 
 Other StoreKit and APNs operations return
@@ -60,10 +64,12 @@ Fill in:
 - `NativeAppleStoreKitClient::purchase` via the `apple-storekit-ffi` symbols
 - `NativeAppleStoreKitClient::restore_purchases` via the `apple-storekit-ffi`
   symbols
-- `NativeAppleStoreKitClient::validate_receipt`
-- `NativeApplePushClient::request_authorization`
-- `NativeApplePushClient::register`
-- `NativeApplePushClient::unregister`
+- `NativeAppleStoreKitClient::validate_receipt` via the `apple-storekit-ffi`
+  symbols
+- `NativeApplePushClient::request_authorization` via the `apple-apns-ffi`
+  symbols
+- `NativeApplePushClient::register` via the `apple-apns-ffi` symbols
+- `NativeApplePushClient::unregister` via the `apple-apns-ffi` symbols
 
 The native layer should normalize StoreKit/APNs outputs into the existing
 `bridgekit::apple` request and response structs before returning them.
